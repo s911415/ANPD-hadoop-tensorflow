@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+}
+
+ext {
+    HADOOP_HOME = System.getenv('HADOOP_HOME')
+    OPENCV_PATH = System.getenv('OPENCV_PATH')
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+task fatJar(type: Jar) {
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+dependencies {
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/client', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/common', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/common/lib', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/hdfs', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/hdfs/lib', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/mapreduce', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/tools/lib', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/yarn', include: ['*.jar'])
+    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/yarn/lib', include: ['*.jar'])
+    compileOnly fileTree(dir: OPENCV_PATH + '/build/java', include: ['*.jar'])
+    // testCompile group: 'junit', name: 'junit', version: '4.12'
+}
