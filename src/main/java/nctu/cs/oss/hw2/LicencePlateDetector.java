@@ -5,6 +5,7 @@ import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.videoio.VideoCapture;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,36 +29,43 @@ public class LicencePlateDetector {
 
     public static void main(String[] args) {
         Path imgPath = Paths.get(args[0]);
-        Mat img = Imgcodecs.imread(imgPath.toFile().getAbsolutePath(), IMREAD_GRAYSCALE);
-        Mat resizedImg = resizeMat(img);
-        img.release();
-        Mat dstImg = resizedImg.clone();
+        String fileName = imgPath.getFileName().toString().toLowerCase();
+        if (fileName.endsWith(".jpg") || fileName.endsWith(".png")) {
+            Mat img = Imgcodecs.imread(imgPath.toFile().getAbsolutePath(), IMREAD_GRAYSCALE);
+            Mat resizedImg = Utils.resizeMat(img, MAX_IMAGE_SIZE);
+            img.release();
+            Mat dstImg = resizedImg.clone();
 
-        boolean ret = isContainsLicencePlate(resizedImg, dstImg);
+            boolean ret = __isContainsLicencePlate(resizedImg, dstImg);
+//        boolean ret = isContainsLicencePlate(resizedImg, dstImg);
 
-        ImageGui gui = new ImageGui(dstImg, "");
-        gui.imshow();
-        gui.waitKey(0);
-    }
+            ImageGui gui = new ImageGui(dstImg, "");
+            gui.imshow();
+            gui.waitKey(0);
+        } else {
+            VideoCapture videoCapture = new VideoCapture(imgPath.toFile().getAbsolutePath());
+            Mat img = new Mat();
+            Mat dstImg = new Mat();
+            Mat resizedMat = new Mat();
+            Mat grayImg = new Mat();
+            ImageGui gui = null;
 
-    private static Mat resizeMat(final Mat img) {
-        Size size = img.size();
-        double widthRatio = MAX_IMAGE_SIZE.width / size.width;
-        double heightRatio = MAX_IMAGE_SIZE.height / size.height;
-        double ratio = Math.min(widthRatio, heightRatio);
-        ratio = Math.min(1.0, ratio);
+            while (videoCapture.read(img)) {
+                Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
+                Utils.toGray(resizedMat, grayImg);
+                grayImg.copyTo(dstImg);
 
-        Size finalSize = new Size(size.width * ratio, size.height * ratio);
+                boolean ret = __isContainsLicencePlate(grayImg, dstImg);
+                if (gui == null) {
+                    gui = new ImageGui(dstImg, "video");
+                    gui.imshow();
+                } else {
+                    gui.imshow(dstImg);
+                }
+                gui.waitKey(30);
+            }
+        }
 
-        Mat ret = new Mat(size, img.type());
-        Imgproc.resize(img, ret, finalSize, 0, 0, Imgproc.INTER_NEAREST);
-        return ret;
-    }
-
-    private static Mat toGray(final Mat img) {
-        Mat dst = new Mat(img.size(), CvType.CV_8UC1);
-        Imgproc.cvtColor(img, dst, Imgproc.COLOR_BGR2GRAY);
-        return dst;
     }
 
     private static boolean isContainsLicencePlate(final Mat grayImg) {
@@ -97,7 +105,7 @@ public class LicencePlateDetector {
                 double width = maxX - minX;
                 double height = maxY - minY;
 
-                if(width > 25 && height > 15) {
+                if (width > 25 && height > 15) {
                     ret = true;
                     if (dstImg != null) {
                         Point leftTop = new Point(minX, minY);
@@ -117,29 +125,33 @@ public class LicencePlateDetector {
 
     private static boolean __isContainsLicencePlate(final Mat grayImg, Mat dstImg) {
         // https://www.twblogs.net/a/5c65944abd9eee06ef37912e
+        Mat blurImage = new Mat(grayImg.size(), grayImg.type());
+        Imgproc.bilateralFilter(grayImg, blurImage, 11, 17, 17);
 
-        CascadeClassifier classifier = new CascadeClassifier("model/car_model.xml");
+
+        CascadeClassifier classifier = new CascadeClassifier("model/cars.xml");
         Size minSize = new Size(28, 15);
         double rate = 23;
         Size maxSize = new Size(minSize.width * rate, minSize.height * rate);
         MatOfRect plates = new MatOfRect();
-        classifier.detectMultiScale(grayImg, plates, 1.1, 2, 0, minSize, maxSize);
+        classifier.detectMultiScale(blurImage, plates, 1.1, 1);
 
         Rect[] plateRects = plates.toArray();
         boolean ret = false;
         Scalar color;
-        if (grayImg.channels() == 1) {
+        if (blurImage.channels() == 1) {
             color = new Scalar(0);
         } else {
             color = new Scalar(0, 255, 0);
         }
 
+        System.out.println("Detected " + plateRects.length + " cars.");
         for (Rect rect : plateRects) {
             ret = true;
             if (dstImg != null) {
                 Point leftTop = new Point(rect.x, rect.y);
                 Point rightBottom = new Point(rect.x + rect.width, rect.y + rect.height);
-                Imgproc.rectangle(dstImg, leftTop, rightBottom, color);
+                Imgproc.rectangle(dstImg, leftTop, rightBottom, color, 2);
             } else {
                 break;
             }

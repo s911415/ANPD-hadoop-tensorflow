@@ -38,16 +38,19 @@ public class ImageGui extends JPanel implements KeyListener {
     private int type;
     private String WINDOW = "";
     private JFrame jframe = new JFrame();
-    byte[] data;
+    byte[] data = null;
 
     private void Mat2BufIm() {
+        int size = mat.cols() * mat.rows() * (int) mat.elemSize();
+        if (data == null || data.length != size) {
+            data = new byte[size];
+        }
         mat.get(0, 0, data);
         out.getRaster().setDataElements(0, 0, mat.cols(), mat.rows(), data);
     }
 
     private void init(Mat m, String window) {
         this.mat = m;
-        data = new byte[mat.cols() * mat.rows() * (int) mat.elemSize()];
 
         WINDOW = window;
 
@@ -77,6 +80,12 @@ public class ImageGui extends JPanel implements KeyListener {
         }
         Mat2BufIm();
         this.repaint();
+    }
+
+    public void imshow(Mat mat) {
+        this.mat = mat;
+        jframe.setSize(mat.cols(), mat.rows());
+        imshow();
     }
 
 
