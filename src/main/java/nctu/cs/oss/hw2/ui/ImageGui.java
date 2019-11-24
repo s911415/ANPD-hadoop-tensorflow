@@ -1,12 +1,15 @@
 package nctu.cs.oss.hw2.ui;
 
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
+
+import static org.opencv.imgproc.Imgproc.COLOR_RGB2BGR;
 
 /**
  * An Gui extention for opencv3.0 using Swing, which can't display images in java.
@@ -32,7 +35,7 @@ public class ImageGui extends JPanel implements KeyListener {
     }
 
     //Elements for paint.
-    private Mat mat;
+    private Mat mat = null;
     private boolean firstPaint = true;
     private BufferedImage out;
     private int type;
@@ -50,14 +53,10 @@ public class ImageGui extends JPanel implements KeyListener {
     }
 
     private void init(Mat m, String window) {
-        this.mat = m;
 
         WINDOW = window;
 
-        if (mat.channels() == 1)
-            type = BufferedImage.TYPE_BYTE_GRAY;
-        else
-            type = BufferedImage.TYPE_3BYTE_BGR;
+        assignMat(m);
         out = new BufferedImage(mat.cols(), mat.rows(), type);
         Mat2BufIm();
         jframe.add(this);
@@ -66,6 +65,20 @@ public class ImageGui extends JPanel implements KeyListener {
         jframe.setTitle(WINDOW);
         jframe.addKeyListener(this);
 
+    }
+
+    private void assignMat(final Mat m) {
+        if (this.mat == null) {
+            this.mat = new Mat();
+        }
+
+        if (m.channels() == 1) {
+            type = BufferedImage.TYPE_BYTE_GRAY;
+            m.copyTo(this.mat);
+        } else {
+            type = BufferedImage.TYPE_3BYTE_BGR;
+            Imgproc.cvtColor(m, this.mat, COLOR_RGB2BGR);
+        }
     }
 
     @Override
@@ -83,7 +96,7 @@ public class ImageGui extends JPanel implements KeyListener {
     }
 
     public void imshow(Mat mat) {
-        this.mat = mat;
+        assignMat(mat);
         jframe.setSize(mat.cols(), mat.rows());
         imshow();
     }
