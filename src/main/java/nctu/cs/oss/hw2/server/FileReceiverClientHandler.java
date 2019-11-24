@@ -31,12 +31,18 @@ public class FileReceiverClientHandler extends Thread {
 
         try {
             InputStream is = _client.getInputStream();
+            OutputStream xos = _client.getOutputStream();
             int fileNameLen = 0;
             fileNameLen = is.read(strBuffer);
+            xos.write(0);
             _fileName = new String(strBuffer, 0, fileNameLen, StandardCharsets.UTF_8);
+            {
+                File tmp = Files.createTempDirectory("_client_").toFile();
+                _tmpDir = new File(tmp, _fileName);
+                _tmpDir.mkdirs();
+            }
 
-            File tmpDir = _tmpDir = Files.createTempDirectory("_client_").toFile();
-            System.out.println("Client tmp dir: " + tmpDir.toString());
+            System.out.println("Client tmp dir: " + _tmpDir.toString());
 
             int frameIdx = 0;
             try (BufferedInputStream bufferedInputStream = new BufferedInputStream(is)) {
@@ -50,7 +56,7 @@ public class FileReceiverClientHandler extends Thread {
                     }
 
                     int remainingSize = imageSize;
-                    File outputFile = new File(tmpDir, frameIdx + EXT);
+                    File outputFile = new File(_tmpDir, frameIdx + EXT);
                     try (FileOutputStream os = new FileOutputStream(outputFile);
                          BufferedOutputStream bos = new BufferedOutputStream(os)) {
 
@@ -71,11 +77,19 @@ public class FileReceiverClientHandler extends Thread {
                         .mapToObj(i -> i + EXT)
                         .collect(Collectors.joining("\n"));
 
-                Files.write(new File(tmpDir, "_files.txt").toPath(), filesTxt.getBytes());
+                Files.write(new File(_tmpDir, "_files.txt").toPath(), filesTxt.getBytes());
                 _server.onClientDisconnected(this);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public File getTmpDir() {
+        return _tmpDir;
+    }
+
+    public String getFileName() {
+        return _fileName;
     }
 }

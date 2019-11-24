@@ -19,7 +19,7 @@ task fatJar(type: Jar) {
 }
 
 dependencies {
-    compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/client', include: ['*.jar'])
+    // compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/client', include: ['*.jar'])
     compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/common', include: ['*.jar'])
     compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/common/lib', include: ['*.jar'])
     compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/hdfs', include: ['*.jar'])

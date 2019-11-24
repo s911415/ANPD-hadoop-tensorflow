@@ -45,11 +45,15 @@ public class Utils {
         Size finalSize = new Size(size.width * ratio, size.height * ratio);
 
         // Mat ret = new Mat(size, img.type());
-        Imgproc.resize(img, dst, finalSize, 0, 0, Imgproc.INTER_NEAREST);
+        Imgproc.resize(img, dst, finalSize, 0, 0, Imgproc.INTER_CUBIC);
         return dst;
     }
 
     public static Mat toGray(final Mat img, Mat dst) {
+        if(img.channels()==1) {
+            img.copyTo(dst);
+            return dst;
+        }
         Imgproc.cvtColor(img, dst, Imgproc.COLOR_BGR2GRAY);
         return dst;
     }
