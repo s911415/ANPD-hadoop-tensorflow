@@ -1,6 +1,7 @@
 package nctu.cs.oss.hw2;
 
 import nctu.cs.oss.hw2.detector.SSDDetector;
+import nctu.cs.oss.hw2.detector.YOLODetector;
 import nctu.cs.oss.hw2.ui.ImageGui;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -15,7 +16,7 @@ import java.nio.file.Paths;
  * Created by wcl on 2019/11/22.
  */
 public class LicencePlateDetector {
-    private static final int MAX_IMAGE_HEIGHT = 1080;
+    private static final int MAX_IMAGE_HEIGHT = 720;
     private static final Size MAX_IMAGE_SIZE = new Size(MAX_IMAGE_HEIGHT * 16 / 9, MAX_IMAGE_HEIGHT);
 
     private static nctu.cs.oss.hw2.detector.LicencePlateDetector _detector = null;
@@ -25,6 +26,7 @@ public class LicencePlateDetector {
     }
 
     public static void main(String[] args) {
+        System.err.println("Start at " + System.currentTimeMillis() + "\n=================\n");
         _detector = new SSDDetector();
 
         Path imgPath = Paths.get(args[0]);
@@ -43,31 +45,38 @@ public class LicencePlateDetector {
             gui.imshow();
             gui.waitKey(0);
         } else {
+            final boolean saveImage = true;
+
             VideoCapture videoCapture = new VideoCapture(imgPath.toFile().getAbsolutePath());
             Mat img = new Mat();
             Mat dstImg = new Mat();
             Mat resizedMat = new Mat();
             ImageGui gui = null;
 
+            int i = 0;
             while (videoCapture.read(img)) {
                 Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
                 resizedMat.copyTo(dstImg);
                 // __isContainsLicencePlate(resizedMat, null);
 
 
-
                 boolean ret = __isContainsLicencePlate(resizedMat, dstImg);
-                if (gui == null) {
-                    gui = new ImageGui(dstImg, "video");
-                    gui.imshow();
-                } else {
-                    gui.imshow(dstImg);
-                }
-                gui.waitKey(1);
 
+                if(saveImage) {
+                    Imgcodecs.imwrite("T:\\out_djfhiodjfh\\" + String.format("%05d", ++i) + ".jpg", dstImg);
+                } else {
+                    if (gui == null) {
+                        gui = new ImageGui(dstImg, "video");
+                        gui.imshow();
+                    } else {
+                        gui.imshow(dstImg);
+                    }
+                    // gui.waitKey(1);
+                }
             }
         }
 
+        System.err.println("End at " + System.currentTimeMillis() + "\n=================\n");
     }
 
     private static boolean __isContainsLicencePlate(final Mat resizedImg, Mat dstImg) {

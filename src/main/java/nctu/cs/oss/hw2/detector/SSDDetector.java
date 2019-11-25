@@ -21,6 +21,7 @@ public class SSDDetector implements LicencePlateDetector {
     private Net _ssdNet;
     private final List<Mat> channelMats = new ArrayList<>(3);
     private final float SCORE_THRESHOLD = 0.15f;
+    private final int FORWARD_CNT = 1;
 
     // B, G, R
     private static final Scalar[] pixelMeans = {
@@ -36,7 +37,8 @@ public class SSDDetector implements LicencePlateDetector {
 
     public SSDDetector() {
         _ssdNet = Dnn.readNetFromCaffe(
-                "model/mssd512_voc.prototxt", "model/mssd512_voc.caffemodel"
+                "model/ssd/mssd512_voc.prototxt",
+                "model/ssd/mssd512_voc.caffemodel"
         );
     }
 
@@ -88,7 +90,7 @@ public class SSDDetector implements LicencePlateDetector {
         _ssdNet.setInput(_tensor);
 
         Mat cvOut = _ssdNet.forward();
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < FORWARD_CNT; i++) {
             cvOut = _ssdNet.forward();
         }
 
