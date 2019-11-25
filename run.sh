@@ -13,4 +13,4 @@ java -cp os-hw2.jar\
 :/opt/hadoop/share/hadoop/yarn/*\
 :/opt/hadoop/share/hadoop/yarn/lib/*\
  \
-nctu.cs.oss.hw2.app.ServerApplication 12345
+nctu.cs.oss.hw2.app.ServerApplication
