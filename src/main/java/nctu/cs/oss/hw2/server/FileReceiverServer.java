@@ -1,5 +1,6 @@
 package nctu.cs.oss.hw2.server;
 
+import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.DetectorJob;
 import nctu.cs.oss.hw2.mapreduce.WholeFileInputFormat;
 import org.apache.hadoop.conf.Configuration;
@@ -29,33 +30,29 @@ import java.util.stream.Collectors;
  * Created by wcl on 2019/11/22.
  */
 public class FileReceiverServer extends Thread {
-    public static final boolean DEBUG = false;
     private final int _port;
     private final ServerSocket _server;
-    private final Properties _props;
     private final FileSystem _hdfs;
     private final FsPermission _pem;
     private final Configuration _conf;
-    private static final Path _outputPath = new Path("os-hw2/output");
+    private static final Path _outputPath = new Path(Config.ROOT_DIR + "/output");
 
 
-    public FileReceiverServer(int port, Properties props) throws IOException {
+    public FileReceiverServer(int port) throws IOException {
         this._port = port;
         this._server = new ServerSocket(port);
-        this._props = props;
 
         // init hdfs
         {
             _conf = new Configuration();
-            if (DEBUG) {
+            if (Config.DEBUG) {
                 _conf.set("mapreduce.framework.name", "local");
                 _hdfs = FileSystem.get(_conf);
             } else {
                 System.setProperty("HADOOP_USER_NAME", "hadoop");
-                String hdfsUrl = props.getProperty("hdfs.url");
-                _conf.set("fs.defaultFS", hdfsUrl);
+                _conf.set("fs.defaultFS", Config.HDFS_URL);
 
-                _hdfs = FileSystem.get(URI.create(hdfsUrl), _conf);
+                _hdfs = FileSystem.get(URI.create(Config.HDFS_URL), _conf);
             }
 
             _pem = new FsPermission(
@@ -84,7 +81,7 @@ public class FileReceiverServer extends Thread {
     }
 
     void onClientDisconnected(FileReceiverClientHandler clientHandler) {
-        String dirName = "os-hw2/" + clientHandler.getFileName();
+        String dirName = Config.ROOT_DIR + "/" + clientHandler.getFileName();
         try {
             Path path = new Path(dirName);
             // remove old file
@@ -120,8 +117,12 @@ public class FileReceiverServer extends Thread {
 
     private void sendHadoopTask(FileReceiverClientHandler client) {
         Configuration conf = new Configuration();
-        if (DEBUG) {
+        if (Config.DEBUG) {
             conf.set("mapreduce.framework.name", "local");
+        } else {
+            conf.addResource("core-site.xml");
+            conf.addResource("mapred-site.xml");
+            conf.addResource("yarn-site.xml");
         }
         try {
             final Job job = Job.getInstance(conf, "os-hw2-" + client.getFileName() + "-" + (int) (Math.random() * 10000));
@@ -139,7 +140,7 @@ public class FileReceiverServer extends Thread {
             job.setOutputValueClass(IntWritable.class);
 
             // FileInputFormat.setInputPathFilter(job, DetectorJob.FilesPathFilter.class);
-            FileInputFormat.addInputPath(job, new Path(client.getHdfsDir()));
+            FileInputFormat.addInputPath(job, new Path(Config.HDFS_URL + client.getHdfsDir()));
             final Path output = client.getOutputFilePath();
             _hdfs.delete(output, true);
             FileOutputFormat.setOutputPath(job, output);

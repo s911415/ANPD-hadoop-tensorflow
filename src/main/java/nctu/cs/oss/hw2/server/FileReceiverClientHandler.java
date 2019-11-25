@@ -1,5 +1,6 @@
 package nctu.cs.oss.hw2.server;
 
+import nctu.cs.oss.hw2.Config;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.Path;
 
@@ -119,11 +120,11 @@ public class FileReceiverClientHandler extends Thread {
     }
 
     public String getHdfsDir() {
-        return "os-hw2/" + getFileName();
+        return Config.ROOT_DIR + "/" + getFileName();
     }
 
     public Path getOutputFilePath() {
         String basename = FilenameUtils.getBaseName(_fileName);
-        return new Path("os-hw2/output/_" + basename + ".txt");
+        return new Path(Config.ROOT_DIR + "/output/_" + basename + ".txt");
     }
 }

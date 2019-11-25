@@ -2,14 +2,12 @@ package nctu.cs.oss.hw2;
 
 import nctu.cs.oss.hw2.detector.LicencePlateDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
-import nctu.cs.oss.hw2.server.FileReceiverServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.opencv.core.Core;
@@ -20,7 +18,6 @@ import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Properties;
 
 /**
  * Created by wcl on 2019/11/25.
@@ -40,7 +37,7 @@ public class DetectorJob {
     private static FileSystem getHdfs() {
         if (_hdfs != null) return _hdfs;
         Configuration conf = new Configuration();
-        if (FileReceiverServer.DEBUG) {
+        if (Config.DEBUG) {
             try {
                 _hdfs = FileSystem.get(conf);
                 return _hdfs;
@@ -49,13 +46,11 @@ public class DetectorJob {
             }
         } else {
             System.setProperty("HADOOP_USER_NAME", "hadoop");
-            Properties props = new Properties();
-            try {
-                props.load(ClassLoader.getSystemResourceAsStream("server.properties"));
-                String hdfsUrl = props.getProperty("hdfs.url");
-                conf.set("fs.defaultFS", hdfsUrl);
 
-                _hdfs = FileSystem.get(URI.create(hdfsUrl), conf);
+            try {
+                _hdfs = FileSystem.get(URI.create(Config.HDFS_URL), conf);
+
+                _hdfs = FileSystem.get(URI.create(Config.HDFS_URL), conf);
                 return _hdfs;
             } catch (IOException e) {
                 e.printStackTrace();
