@@ -1,5 +1,6 @@
 package nctu.cs.oss.hw2.detector;
 
+import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.Utils;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
@@ -14,7 +15,7 @@ public class DetectCarDetector implements LicencePlateDetector{
     private CascadeClassifier _classifier;
 
     public DetectCarDetector(){
-        _classifier = new CascadeClassifier("model/cars.xml");
+        _classifier = new CascadeClassifier(Config.MODEL_ROOT + "model/cars.xml");
     }
 
     @Override
@@ -31,7 +32,7 @@ public class DetectCarDetector implements LicencePlateDetector{
 
         final Mat targetImg = blurImage;
 
-        CascadeClassifier classifier = new CascadeClassifier("model/cars.xml");
+        CascadeClassifier classifier = new CascadeClassifier(Config.MODEL_ROOT + "model/cars.xml");
         Size minSize = new Size(28, 15);
         double rate = 23;
         Size maxSize = new Size(minSize.width * rate, minSize.height * rate);

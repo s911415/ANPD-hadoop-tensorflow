@@ -1,5 +1,6 @@
 package nctu.cs.oss.hw2.detector;
 
+import nctu.cs.oss.hw2.Config;
 import org.opencv.core.*;
 import org.opencv.dnn.Dnn;
 import org.opencv.dnn.Net;
@@ -29,8 +30,8 @@ public class YOLODetector implements LicencePlateDetector {
 
     public YOLODetector() {
         _yoloNet = Dnn.readNetFromDarknet(
-                "model/yolo/darknet-yolov3.cfg",
-                "model/yolo/lapi.weights"
+                Config.MODEL_ROOT + "model/yolo/darknet-yolov3.cfg",
+                Config.MODEL_ROOT + "model/yolo/lapi.weights"
         );
 
         _yoloNet.setPreferableBackend(DNN_BACKEND_OPENCV);

@@ -1,5 +1,6 @@
 package nctu.cs.oss.hw2.detector;
 
+import nctu.cs.oss.hw2.Config;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -37,8 +38,8 @@ public class SSDDetector implements LicencePlateDetector {
 
     public SSDDetector() {
         _ssdNet = Dnn.readNetFromCaffe(
-                "model/ssd/mssd512_voc.prototxt",
-                "model/ssd/mssd512_voc.caffemodel"
+                Config.MODEL_ROOT + "model/ssd/mssd512_voc.prototxt",
+                Config.MODEL_ROOT + "model/ssd/mssd512_voc.caffemodel"
         );
     }
 
