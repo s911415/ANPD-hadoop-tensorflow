@@ -64,48 +64,48 @@ public class FileReceiverClientHandler extends Thread {
             System.out.println("Client tmp dir: " + _tmpDir.toString());
 
             int frameIdx = 0;
-            boolean eof = false;
-            while (!eof) {
+
+            readFrameLoop:
+            while (true) {
                 int idxRemaining = FRAME_IDX_SIZE;
                 int len = 0;
+                // get idx
                 while (idxRemaining > 0) {
                     int offset = FRAME_IDX_SIZE - idxRemaining;
                     if ((len = is.read(strBuffer, offset, idxRemaining)) > 0) {
                         idxRemaining -= len;
-                    } else {
-                        eof = true;
-                        break;
-                    }
-
-                    {
-                        String frameIdxStr = new String(strBuffer, 0, FRAME_IDX_SIZE, StandardCharsets.UTF_8);
-                        frameIdxStr = frameIdxStr.trim();
-                        int imageSize = Integer.parseInt(frameIdxStr);
-                        if (imgBuffer.length < imageSize) {
-                            imgBuffer = new byte[(imageSize >> 12) << 12];
-                        }
-
-                        int remainingSize = imageSize;
-                        File outputFile = new File(_tmpDir, frameIdx + EXT);
-                        try (FileOutputStream os = new FileOutputStream(outputFile);
-                             BufferedOutputStream bos = new BufferedOutputStream(os)) {
-
-                            while ((len = is.read(
-                                    imgBuffer,
-                                    0, Math.min(imgBuffer.length, remainingSize)
-                            )) > 0) {
-                                bos.write(imgBuffer, 0, len);
-                                remainingSize -= len;
-                                if (remainingSize == 0)
-                                    break;
-                            }
-                        }
-                        frameIdx++;
+                    } else if (len == -1) {
+                        break readFrameLoop;
                     }
                 }
+
+                // read frame
+                {
+                    String frameIdxStr = new String(strBuffer, 0, FRAME_IDX_SIZE, StandardCharsets.UTF_8);
+                    frameIdxStr = frameIdxStr.trim();
+                    int imageSize = Integer.parseInt(frameIdxStr);
+                    if (imgBuffer.length < imageSize) {
+                        imgBuffer = new byte[(imageSize >> 12) << 12];
+                    }
+
+                    int remainingSize = imageSize;
+                    File outputFile = new File(_tmpDir, frameIdx + EXT);
+                    try (FileOutputStream os = new FileOutputStream(outputFile)) {
+                        while ((len = is.read(
+                                imgBuffer,
+                                0, Math.min(imgBuffer.length, remainingSize)
+                        )) > 0) {
+                            os.write(imgBuffer, 0, len);
+                            remainingSize -= len;
+                            if (remainingSize == 0)
+                                break;
+                        }
+                    }
+                    frameIdx++;
+                }
             }
-            _server.onClientDisconnected(this);
             _client.close();
+            _server.onClientDisconnected(this);
         } catch (IOException e) {
             e.printStackTrace();
         }
