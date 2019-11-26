@@ -1,5 +1,6 @@
-package nctu.cs.oss.hw2;
+package nctu.cs.oss.hw2.app;
 
+import nctu.cs.oss.hw2.Utils;
 import nctu.cs.oss.hw2.detector.SSDDetector;
 import nctu.cs.oss.hw2.detector.YOLODetector;
 import nctu.cs.oss.hw2.ui.ImageGui;
@@ -15,7 +16,7 @@ import java.nio.file.Paths;
 /**
  * Created by wcl on 2019/11/22.
  */
-public class LicencePlateDetector {
+public class LicencePlateDetectorApp {
     private static final int MAX_IMAGE_HEIGHT = 720;
     private static final Size MAX_IMAGE_SIZE = new Size(MAX_IMAGE_HEIGHT * 16 / 9, MAX_IMAGE_HEIGHT);
 
