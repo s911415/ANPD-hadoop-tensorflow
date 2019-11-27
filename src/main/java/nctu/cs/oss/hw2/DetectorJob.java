@@ -2,6 +2,7 @@ package nctu.cs.oss.hw2;
 
 import nctu.cs.oss.hw2.detector.LicencePlateDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
+import org.apache.commons.lang3.Conversion;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,8 +50,6 @@ public class DetectorJob {
 
             try {
                 _hdfs = FileSystem.get(URI.create(Config.HDFS_URL), conf);
-
-                _hdfs = FileSystem.get(URI.create(Config.HDFS_URL), conf);
                 return _hdfs;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -75,39 +74,63 @@ public class DetectorJob {
             imgData = new MatOfByte();
         }
 
-        private IntWritable frameIdx = new IntWritable();
+        private IntWritable frameIdxWriteable = new IntWritable();
 
         @Override
         public void map(Object key, BytesWritable value, Context context
         ) throws IOException, InterruptedException {
             String fileName = ((org.apache.hadoop.mapreduce.lib.input.FileSplit)
                     (context.getInputSplit())).getPath().getName();
-            System.err.println(fileName);
+            String baseName = fileName.substring(0, fileName.indexOf('.'));
+            int frameStart = 0;
+            int frameEnd = 0;
+            {
+                int dimIdx = baseName.indexOf('_');
+                frameStart = Integer.parseInt(baseName.substring(0, dimIdx));
+                frameEnd = Integer.parseInt(baseName.substring(dimIdx + 1));
+            }
+            System.err.println("Process frames: " + frameStart + " to " + frameEnd);
+
+            byte[] imageBinData = value.getBytes();
+            final int dataLen = value.getLength();
+            int offset = 0;
+            int frameIdx = frameStart;
 
             Mat img;
-            {
-                byte[] imageData = value.getBytes();
-                imgData.fromArray(imageData);
-                img = Imgcodecs.imdecode(imgData, Imgcodecs.IMREAD_UNCHANGED);
-                Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
-                img.release();
-            }
+            while(offset < dataLen) {
+                int imageSize = Conversion.byteArrayToInt(
+                        imageBinData,
+                        offset, 0,
+                        0, 4);
+                offset+=4;
 
-            int count = _detector.detect(resizedMat);
-            System.out.println("File: " + fileName + " detected " + count + " plates");
+                imgData.fromArray(offset, imageSize, imageBinData);
 
-            IntWritable writeValue;
-            if (count > 0) {
-                writeValue = ONE;
-            } else {
-                writeValue = ZERO;
-            }
+                {
+                    img = Imgcodecs.imdecode(imgData, Imgcodecs.IMREAD_UNCHANGED);
+                    Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
+                    img.release();
+                }
+                {
+                    int count = _detector.detect(resizedMat);
+                    System.out.println("File: " + fileName + ", Frame: "+frameIdx+" detected " + count + " plates");
 
-            // only write key value if detected
-            if (count > 0) {
-                Integer idx = Integer.parseInt(fileName.substring(0, fileName.indexOf('.')));
-                frameIdx.set(idx);
-                context.write(frameIdx, writeValue);
+                    IntWritable writeValue;
+                    if (count > 0) {
+                        writeValue = ONE;
+                    } else {
+                        writeValue = ZERO;
+                    }
+
+                    // only write key value if detected
+                    if (count > 0) {
+                        this.frameIdxWriteable.set(frameIdx);
+                        context.write(this.frameIdxWriteable, writeValue);
+                    }
+                }
+
+                frameIdx++;
+                offset+=imageSize;
             }
         }
     }

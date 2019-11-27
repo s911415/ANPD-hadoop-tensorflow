@@ -1,7 +1,9 @@
 package nctu.cs.oss.hw2.server;
 
 import nctu.cs.oss.hw2.Config;
+import nctu.cs.oss.hw2.Utils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.Conversion;
 import org.apache.hadoop.fs.Path;
 
 import java.io.*;
@@ -27,9 +29,10 @@ public class FileReceiverClientHandler extends Thread {
     public void run() {
         final int BUFFER_SIZE = 1024;
         final int FRAME_IDX_SIZE = 16;
-        final String EXT = ".jpg";
+        final String EXT = ".bin";
         byte[] strBuffer = new byte[BUFFER_SIZE];
         byte[] imgBuffer = new byte[1024 * 1024];
+        byte[] imgSizeBytes = new byte[4];
 
         try (
                 InputStream originalIs = _client.getInputStream();
@@ -63,49 +66,47 @@ public class FileReceiverClientHandler extends Thread {
 
             System.out.println("Client tmp dir: " + _tmpDir.toString());
 
+            int binIdx = 0;
             int frameIdx = 0;
 
             readFrameLoop:
             while (true) {
                 int len = 0;
+                int frameIdxStart = binIdx * Config.BATCH_SIZE;
+                int frameIdxEnd = frameIdxStart + Config.BATCH_SIZE - 1;
+                File binOutputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + EXT);
+                try (FileOutputStream binOs = new FileOutputStream(binOutputFile, false)) {
+                    for (int i = 0; i < Config.BATCH_SIZE; i++) {
+                        int imageSize;
 
-                // get frame size
-                {
-                    int idxRemaining = FRAME_IDX_SIZE;
-                    while (idxRemaining > 0) {
-                        int offset = FRAME_IDX_SIZE - idxRemaining;
-                        if ((len = is.read(strBuffer, offset, idxRemaining)) > 0) {
-                            idxRemaining -= len;
-                        } else if (len == -1) {
-                            break readFrameLoop;
+                        // get frame size
+                        {
+                            if (Utils.read(is, strBuffer, 0, FRAME_IDX_SIZE) < 0) {
+                                break readFrameLoop;
+                            }
+
+                            String frameIdxStr = new String(strBuffer, 0, FRAME_IDX_SIZE, StandardCharsets.UTF_8);
+                            frameIdxStr = frameIdxStr.trim();
+                            imageSize = Integer.parseInt(frameIdxStr);
+                            Conversion.intToByteArray(imageSize, 0, imgSizeBytes, 0, 4);
+                            binOs.write(imgSizeBytes, 0, 4);
+                        }
+
+                        // read frame
+                        {
+                            if (imgBuffer.length < imageSize) {
+                                imgBuffer = new byte[(imageSize >> 12) << 12];
+                            }
+
+                            if (Utils.read(is, imgBuffer, 0, imageSize) < 0) {
+                                throw new EOFException("Image data eof early");
+                            }
+                            binOs.write(imgBuffer, 0, imageSize);
+
+                            frameIdx++;
                         }
                     }
-                }
-
-
-                // read frame
-                {
-                    String frameIdxStr = new String(strBuffer, 0, FRAME_IDX_SIZE, StandardCharsets.UTF_8);
-                    frameIdxStr = frameIdxStr.trim();
-                    int imageSize = Integer.parseInt(frameIdxStr);
-                    if (imgBuffer.length < imageSize) {
-                        imgBuffer = new byte[(imageSize >> 12) << 12];
-                    }
-
-                    int remainingSize = imageSize;
-                    File outputFile = new File(_tmpDir, frameIdx + EXT);
-                    try (FileOutputStream os = new FileOutputStream(outputFile)) {
-                        while ((len = is.read(
-                                imgBuffer,
-                                0, Math.min(imgBuffer.length, remainingSize)
-                        )) > 0) {
-                            os.write(imgBuffer, 0, len);
-                            remainingSize -= len;
-                            if (remainingSize == 0)
-                                break;
-                        }
-                    }
-                    frameIdx++;
+                    binIdx++;
                 }
             }
             _client.close();

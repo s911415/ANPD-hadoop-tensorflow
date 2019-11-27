@@ -5,6 +5,10 @@ import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * Created by wcl on 2019/11/22.
  */
@@ -50,7 +54,7 @@ public class Utils {
     }
 
     public static Mat toGray(final Mat img, Mat dst) {
-        if(img.channels()==1) {
+        if (img.channels() == 1) {
             img.copyTo(dst);
             return dst;
         }
@@ -62,4 +66,19 @@ public class Utils {
         return toGray(img, new Mat(img.size(), CvType.CV_8UC1));
     }
 
+    public static int read(InputStream is, byte[] data, int offset, int len) throws IOException {
+        int bytesRead = 0;
+        int readLen = 0;
+        while (bytesRead < len) {
+            readLen = is.read(data, bytesRead, len - bytesRead);
+            if (readLen == -1) {
+                if (bytesRead > 0)
+                    throw new EOFException();
+                return -1;
+            }
+            bytesRead += readLen;
+        }
+
+        return bytesRead;
+    }
 }
