@@ -8,6 +8,9 @@ import org.opencv.imgproc.Imgproc;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Created by wcl on 2019/11/22.
@@ -80,5 +83,25 @@ public class Utils {
         }
 
         return bytesRead;
+    }
+
+    private static MessageDigest _digest = null;
+
+    public static String getSha1(byte[] input, int offset, int len) {
+        if (_digest == null) {
+            try {
+                _digest = MessageDigest.getInstance("SHA-1");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        synchronized (_digest) {
+            _digest.reset();
+            _digest.update(input, offset, len);
+            byte[] result = _digest.digest();
+
+            return String.format("%040x", new BigInteger(1, result));
+        }
     }
 }

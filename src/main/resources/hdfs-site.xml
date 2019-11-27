@@ -37,4 +37,14 @@
 		<name>dfs.namenode.datanode.registration.ip-hostname-check</name>
 		<value>false</value>
 	</property>
+
+	<property>
+		<name>dfs.blocksize</name>
+		<value>131072</value> <!-- 128k -->
+	</property>
+
+	<property>
+		<name>dfs.namenode.fs-limits.min-block-size</name>
+		<value>131072</value> <!-- 128k -->
+	</property>
 </configuration>

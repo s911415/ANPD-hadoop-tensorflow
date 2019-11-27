@@ -4,9 +4,7 @@ import nctu.cs.oss.hw2.detector.LicencePlateDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
 import org.apache.commons.lang3.Conversion;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -19,6 +17,10 @@ import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+
+import static nctu.cs.oss.hw2.Config.CACHE_ROOT;
 
 /**
  * Created by wcl on 2019/11/25.
@@ -29,6 +31,7 @@ public class DetectorJob {
 
     private final static IntWritable ZERO = new IntWritable(0);
     private final static IntWritable ONE = new IntWritable(1);
+    private final static Map<String, Boolean> _cache = new HashMap<>();
 
     private static FileSystem _hdfs = null;
 
@@ -57,6 +60,21 @@ public class DetectorJob {
         }
 
         throw new RuntimeException("cannot get hdfs");
+    }
+
+    private static void updateCache() {
+        try {
+            FileStatus[] files = getHdfs().listStatus(new Path(CACHE_ROOT));
+            for (FileStatus fileStatus : files) {
+                String sha1Val = fileStatus.getPath().getName();
+                if (sha1Val.length() == 40) {
+                    boolean detectedResult = fileStatus.getLen() > 0;
+                    _cache.putIfAbsent(sha1Val, detectedResult);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static class DetectorMapper
@@ -89,6 +107,8 @@ public class DetectorJob {
                 frameStart = Integer.parseInt(baseName.substring(0, dimIdx));
                 frameEnd = Integer.parseInt(baseName.substring(dimIdx + 1));
             }
+
+            DetectorJob.updateCache();
             System.err.println("Process frames: " + frameStart + " to " + frameEnd);
 
             byte[] imageBinData = value.getBytes();
@@ -97,40 +117,59 @@ public class DetectorJob {
             int frameIdx = frameStart;
 
             Mat img;
-            while(offset < dataLen) {
+            while (offset < dataLen) {
                 int imageSize = Conversion.byteArrayToInt(
                         imageBinData,
                         offset, 0,
                         0, 4);
-                offset+=4;
+                offset += 4;
 
-                imgData.fromArray(offset, imageSize, imageBinData);
+                String sha1 = Utils.getSha1(imageBinData, offset, imageSize);
+                Boolean cachedResult = _cache.get(sha1);
+                Boolean detectResult;
+                if (cachedResult != null) {
+                    detectResult = cachedResult;
+                    System.out.println("File: " + fileName + ", Frame: " + frameIdx + " fetch from cache: " + detectResult + ".");
+                } else {
+                    // Cache missed
 
-                {
-                    img = Imgcodecs.imdecode(imgData, Imgcodecs.IMREAD_UNCHANGED);
-                    Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
-                    img.release();
+                    imgData.fromArray(offset, imageSize, imageBinData);
+
+                    {
+                        img = Imgcodecs.imdecode(imgData, Imgcodecs.IMREAD_UNCHANGED);
+                        Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
+                        img.release();
+                    }
+                    {
+                        int count = _detector.detect(resizedMat);
+                        System.out.println("File: " + fileName + ", Frame: " + frameIdx + " detected " + count + " plates");
+
+                        detectResult = count > 0;
+                    }
+
+                    updateCache(sha1, detectResult);
                 }
-                {
-                    int count = _detector.detect(resizedMat);
-                    System.out.println("File: " + fileName + ", Frame: "+frameIdx+" detected " + count + " plates");
 
-                    IntWritable writeValue;
-                    if (count > 0) {
-                        writeValue = ONE;
-                    } else {
-                        writeValue = ZERO;
-                    }
-
-                    // only write key value if detected
-                    if (count > 0) {
-                        this.frameIdxWriteable.set(frameIdx);
-                        context.write(this.frameIdxWriteable, writeValue);
-                    }
+                // only write key value if detected
+                if (detectResult) {
+                    this.frameIdxWriteable.set(frameIdx);
+                    context.write(this.frameIdxWriteable, ONE);
                 }
 
                 frameIdx++;
-                offset+=imageSize;
+                offset += imageSize;
+            }
+        }
+
+        private void updateCache(String sha1Value, Boolean value) {
+            _cache.put(sha1Value, value);
+            Path path = new Path(CACHE_ROOT + sha1Value);
+            try (FSDataOutputStream os = getHdfs().create(path, true)) {
+                if (value) {
+                    os.write((byte) 1);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
