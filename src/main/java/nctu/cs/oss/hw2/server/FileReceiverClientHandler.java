@@ -67,17 +67,21 @@ public class FileReceiverClientHandler extends Thread {
 
             readFrameLoop:
             while (true) {
-                int idxRemaining = FRAME_IDX_SIZE;
                 int len = 0;
-                // get idx
-                while (idxRemaining > 0) {
-                    int offset = FRAME_IDX_SIZE - idxRemaining;
-                    if ((len = is.read(strBuffer, offset, idxRemaining)) > 0) {
-                        idxRemaining -= len;
-                    } else if (len == -1) {
-                        break readFrameLoop;
+
+                // get frame size
+                {
+                    int idxRemaining = FRAME_IDX_SIZE;
+                    while (idxRemaining > 0) {
+                        int offset = FRAME_IDX_SIZE - idxRemaining;
+                        if ((len = is.read(strBuffer, offset, idxRemaining)) > 0) {
+                            idxRemaining -= len;
+                        } else if (len == -1) {
+                            break readFrameLoop;
+                        }
                     }
                 }
+
 
                 // read frame
                 {
