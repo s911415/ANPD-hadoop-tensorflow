@@ -38,13 +38,17 @@
 		<value>false</value>
 	</property>
 
-	<property>
-		<name>dfs.blocksize</name>
-		<value>131072</value> <!-- 128k -->
-	</property>
+	<!-- 128k 131072-->
+	<!-- 64m 67108864-->
+	<!--
+    <property>
+        <name>dfs.blocksize</name>
+        <value>131072</value>
+    </property>
 
-	<property>
-		<name>dfs.namenode.fs-limits.min-block-size</name>
-		<value>131072</value> <!-- 128k -->
-	</property>
+    <property>
+        <name>dfs.namenode.fs-limits.min-block-size</name>
+        <value>131072</value>
+    </property>
+    -->
 </configuration>

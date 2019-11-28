@@ -18,6 +18,26 @@ task fatJar(type: Jar) {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
     with jar
+    manifest {
+        attributes(
+                'Built-By': 'wcl',
+                'Build-Timestamp': new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Build-Jdk': "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+                'Build-OS': "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+
+                'Main-Class': "nctu.cs.oss.hw2.app.ServerApplication",
+                'Class-Path': "" +
+                        "/opt/hadoop/share/hadoop/common/*:" +
+                        "/opt/hadoop/share/hadoop/common/lib/*:" +
+                        "/opt/hadoop/share/hadoop/hdfs/*:" +
+                        "/opt/hadoop/share/hadoop/hdfs/lib/*:" +
+                        "/opt/hadoop/share/hadoop/mapreduce/*:" +
+                        "/opt/hadoop/share/hadoop/tools/lib/*:" +
+                        "/opt/hadoop/share/hadoop/yarn/*:" +
+                        "/opt/hadoop/share/hadoop/yarn/lib/*"
+        )
+    }
 }
 
 dependencies {

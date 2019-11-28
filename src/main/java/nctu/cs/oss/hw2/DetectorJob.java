@@ -64,7 +64,8 @@ public class DetectorJob {
 
     private static void updateCache() {
         try {
-            FileStatus[] files = getHdfs().listStatus(new Path(CACHE_ROOT));
+            Path path = new Path(CACHE_ROOT);
+            FileStatus[] files = getHdfs().listStatus(path);
             for (FileStatus fileStatus : files) {
                 String sha1Val = fileStatus.getPath().getName();
                 if (sha1Val.length() == 40) {
@@ -75,6 +76,29 @@ public class DetectorJob {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private static Boolean getCachedResult(String sha1Value) {
+        Boolean localCacheResult;
+        if ((localCacheResult = _cache.get(sha1Value)) != null) {
+            return localCacheResult;
+        }
+        Path path = new Path(CACHE_ROOT + sha1Value);
+        try {
+            FileStatus[] files = getHdfs().listStatus(path);
+            for (FileStatus fileStatus : files) {
+                String sha1Val = fileStatus.getPath().getName();
+                if (sha1Val.length() == 40) {
+                    boolean detectedResult = fileStatus.getLen() > 0;
+                    _cache.putIfAbsent(sha1Val, detectedResult);
+                    return detectedResult;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     public static class DetectorMapper
@@ -108,8 +132,8 @@ public class DetectorJob {
                 frameEnd = Integer.parseInt(baseName.substring(dimIdx + 1));
             }
 
-            DetectorJob.updateCache();
             System.err.println("Process frames: " + frameStart + " to " + frameEnd);
+            DetectorJob.updateCache();
 
             byte[] imageBinData = value.getBytes();
             final int dataLen = value.getLength();
@@ -125,7 +149,7 @@ public class DetectorJob {
                 offset += 4;
 
                 String sha1 = Utils.getSha1(imageBinData, offset, imageSize);
-                Boolean cachedResult = _cache.get(sha1);
+                Boolean cachedResult = getCachedResult(sha1);
                 Boolean detectResult;
                 if (cachedResult != null) {
                     detectResult = cachedResult;
