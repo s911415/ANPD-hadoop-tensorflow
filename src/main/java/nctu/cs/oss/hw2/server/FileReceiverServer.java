@@ -72,7 +72,9 @@ public class FileReceiverServer extends Thread {
             try {
                 synchronized (_server) {
                     Socket client = _server.accept();
-                    new FileReceiverClientHandler(client, this).start();
+                    FileReceiverClientHandler handler = new FileReceiverClientHandler(client, this);
+                    handler.setPriority(0);
+                    handler.start();
                 }
             } catch (IOException e) {
                 e.printStackTrace();

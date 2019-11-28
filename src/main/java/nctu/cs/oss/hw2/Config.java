@@ -14,7 +14,8 @@ public class Config {
     public static final String MODEL_ROOT;
     public static final String CACHE_ROOT = "/cache/img_cache/";
     public static final int BATCH_SIZE = 100;
-    public static final int MAX_TMP_FILE_PER_CLIENT = 3;
+    public static final int MAX_TMP_FILE_PER_CLIENT = 5;
+    public static final int MAX_UPLOADER_SAME_TIME = 100;
 
     static {
         if(DEBUG) {

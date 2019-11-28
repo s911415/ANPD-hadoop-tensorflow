@@ -23,6 +23,7 @@ public class FileReceiverClientHandler extends Thread {
     private String _fileName;
     private File _tmpDir;
     private final List<Thread> _uploadThreads = new ArrayList<>();
+    private static final Semaphore _globalUploaderSem = new Semaphore(Config.MAX_UPLOADER_SAME_TIME);
 
     FileReceiverClientHandler(Socket client, FileReceiverServer server) {
         _server = server;
@@ -76,14 +77,13 @@ public class FileReceiverClientHandler extends Thread {
 
             int binIdx = 0;
             int frameIdx = 0;
-            final Semaphore semaphore = new Semaphore(Config.MAX_TMP_FILE_PER_CLIENT, true);
 
             readFrameLoop:
             while (true) {
                 int len = 0;
                 int frameIdxStart = binIdx * Config.BATCH_SIZE;
                 int frameIdxEnd = frameIdxStart + Config.BATCH_SIZE - 1;
-                semaphore.acquire();
+                _globalUploaderSem.acquire();
                 final File binOutputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + EXT);
                 try (FileOutputStream binOs = new FileOutputStream(binOutputFile, false)) {
                     for (int i = 0; i < Config.BATCH_SIZE; i++) {
@@ -133,9 +133,10 @@ public class FileReceiverClientHandler extends Thread {
                             if (!binOutputFile.delete()) {
                                 System.err.println("Failed to delete tmp file: " + binOutputFile);
                             }
-                            semaphore.release();
                         } catch (IOException e) {
                             e.printStackTrace();
+                        } finally {
+                            _globalUploaderSem.release();
                         }
                     });
                     t.start();
