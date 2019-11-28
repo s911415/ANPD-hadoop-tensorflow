@@ -10,6 +10,8 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by wcl on 2019/11/22.
@@ -19,6 +21,7 @@ public class FileReceiverClientHandler extends Thread {
     private final FileReceiverServer _server;
     private String _fileName;
     private File _tmpDir;
+    private final List<Thread> _uploadThreads = new ArrayList<>();
 
     FileReceiverClientHandler(Socket client, FileReceiverServer server) {
         _server = server;
@@ -59,12 +62,16 @@ public class FileReceiverClientHandler extends Thread {
             }
             _fileName = sb.toString();
             {
-                File tmp = Files.createTempDirectory("_client_").toFile();
-                _tmpDir = new File(tmp, _fileName);
-                _tmpDir.mkdirs();
+                _tmpDir = Files.createTempDirectory("_client_").toFile();
             }
 
             System.out.println("Client tmp dir: " + _tmpDir.toString());
+
+            // remove old file on hdfs
+            Path baseDir = new Path(getHdfsDir());
+            {
+                _server.getFs().delete(baseDir, true);
+            }
 
             int binIdx = 0;
             int frameIdx = 0;
@@ -74,7 +81,7 @@ public class FileReceiverClientHandler extends Thread {
                 int len = 0;
                 int frameIdxStart = binIdx * Config.BATCH_SIZE;
                 int frameIdxEnd = frameIdxStart + Config.BATCH_SIZE - 1;
-                File binOutputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + EXT);
+                final File binOutputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + EXT);
                 try (FileOutputStream binOs = new FileOutputStream(binOutputFile, false)) {
                     for (int i = 0; i < Config.BATCH_SIZE; i++) {
                         int imageSize;
@@ -107,12 +114,41 @@ public class FileReceiverClientHandler extends Thread {
                         }
                     }
                     binIdx++;
+                } finally {
+                    Thread t = new Thread(() -> {
+                        try {
+                            Path dst = new Path(baseDir, binOutputFile.getName());
+
+                            System.out.println("Uploading " + dst.toString());
+
+                            _server.getFs().copyFromLocalFile(
+                                    new Path(binOutputFile.getAbsolutePath()),
+                                    dst
+                            );
+
+                            System.out.println(dst.toString() + " uploaded");
+                            if (!binOutputFile.delete()) {
+                                System.err.println("Failed to delete tmp file: " + binOutputFile);
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                    t.start();
+                    _uploadThreads.add(t);
                 }
             }
             _client.close();
+
             _server.onClientDisconnected(this);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    void waitAllUploadThread() throws InterruptedException {
+        for (Thread t : _uploadThreads) {
+            t.join();
         }
     }
 

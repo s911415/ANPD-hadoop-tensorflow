@@ -80,17 +80,14 @@ public class FileReceiverServer extends Thread {
     }
 
     void onClientDisconnected(FileReceiverClientHandler clientHandler) {
-        String dirName = Config.ROOT_DIR + "/" + clientHandler.getFileName();
+        // String dirName = Config.ROOT_DIR + "/" + clientHandler.getFileName();
         try {
-            Path path = new Path(dirName);
-            // remove old file
-            _hdfs.delete(path, true);
-            _hdfs.copyFromLocalFile(false, true,
-                    new Path(clientHandler.getTmpDir().getAbsolutePath() + "/"),
-                    path.getParent()
-            );
+            clientHandler.waitAllUploadThread();
+            if(!clientHandler.getTmpDir().delete()){
+                System.err.println("Failed to remove tmp dir: "  + clientHandler.getTmpDir().getAbsolutePath());
+            }
             sendHadoopTask(clientHandler);
-        } catch (IOException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -98,6 +95,10 @@ public class FileReceiverServer extends Thread {
     private void mkdirs(String dirName) throws IOException {
         Path f = new Path(dirName);
         mkdirs(f);
+    }
+
+    FileSystem getFs() {
+        return _hdfs;
     }
 
     private void mkdirs(Path path) throws IOException {
@@ -172,19 +173,25 @@ public class FileReceiverServer extends Thread {
 
                     Collections.sort(frames);
 
-                    // TODO: inject frames
+                    // inject frames
+                    if(false) {
+                       final int len = frames.size();
+                       for(int i = 0; i<len; i++) {
 
-                    File outputFile = new File(tmpDir, "out.txt");
+                       }
+
+                        Collections.sort(frames);
+                    }
+
                     String outStr = frames.stream().map((i) -> i.toString())
                             .collect(Collectors.joining("\n"));
-                    Files.write(outputFile.toPath(), outStr.getBytes());
-
-                    _hdfs.copyFromLocalFile(
-                            true,
-                            new Path(outputFile.getAbsolutePath()),
-                            new Path(output.toString().replace("output/_", "output/"))
-                    );
-
+                    try (FSDataOutputStream os = _hdfs.create(
+                            new Path(output.toString().replace("output/_", "output/")),
+                            true
+                    )) {
+                        os.writeBytes(outStr);
+                    }
+                    _hdfs.delete(output, true);
                 } catch (IOException | InterruptedException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
