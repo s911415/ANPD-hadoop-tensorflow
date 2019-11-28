@@ -4,6 +4,7 @@ import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.DetectorJob;
 import nctu.cs.oss.hw2.mapreduce.WholeFileInputFormat;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
