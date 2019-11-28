@@ -4,7 +4,7 @@ package nctu.cs.oss.hw2;
  * Created by wcl on 2019/11/25.
  */
 public class Config {
-    private Config(){
+    private Config() {
     }
 
     public static final boolean DEBUG = false;
@@ -16,16 +16,21 @@ public class Config {
     public static final int BATCH_SIZE = 100;
     public static final int MAX_TMP_FILE_PER_CLIENT = 5;
     public static final int MAX_UPLOADER_SAME_TIME = 100;
+    public static final BinFormat BIN_FORMAT = BinFormat.Video;
 
     static {
-        if(DEBUG) {
+        if (DEBUG) {
             MODEL_ROOT = "";
             ROOT_DIR = "os-hw2";
             CACHE_ROOT = "Y:/cache/img_cache/";
         } else {
             ROOT_DIR = "/os-hw2";
-            MODEL_ROOT  = "/data/";
+            MODEL_ROOT = "/data/";
             CACHE_ROOT = "/cache/img_cache/";
         }
+    }
+
+    public enum BinFormat {
+        Bin, Video
     }
 }
