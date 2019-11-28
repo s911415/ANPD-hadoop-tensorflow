@@ -5,6 +5,11 @@ import nctu.cs.oss.hw2.Utils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.Conversion;
 import org.apache.hadoop.fs.Path;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.videoio.VideoWriter;
 
 import java.io.*;
 import java.net.Socket;
@@ -18,6 +23,10 @@ import java.util.concurrent.Semaphore;
  * Created by wcl on 2019/11/22.
  */
 public class FileReceiverClientHandler extends Thread {
+    static {
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+    }
+
     private final Socket _client;
     private final FileReceiverServer _server;
     private String _fileName;
@@ -35,6 +44,7 @@ public class FileReceiverClientHandler extends Thread {
         final int BUFFER_SIZE = 1024;
         final int FRAME_IDX_SIZE = 16;
         final String EXT = ".bin";
+        final String VIDEO_EXT = ".avi";
         byte[] strBuffer = new byte[BUFFER_SIZE];
         byte[] imgBuffer = new byte[1024 * 1024];
         byte[] imgSizeBytes = new byte[4];
@@ -77,6 +87,8 @@ public class FileReceiverClientHandler extends Thread {
 
             int binIdx = 0;
             int frameIdx = 0;
+            final MatOfByte rawFrame = new MatOfByte();
+            int fourcc = VideoWriter.fourcc('X', 'V', 'I', 'D');
 
             readFrameLoop:
             while (true) {
@@ -85,6 +97,9 @@ public class FileReceiverClientHandler extends Thread {
                 int frameIdxEnd = frameIdxStart + Config.BATCH_SIZE - 1;
                 _globalUploaderSem.acquire();
                 final File binOutputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + EXT);
+                final File videoOutputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + VIDEO_EXT);
+
+                VideoWriter videoWriter = null;
                 try (FileOutputStream binOs = new FileOutputStream(binOutputFile, false)) {
                     for (int i = 0; i < Config.BATCH_SIZE; i++) {
                         int imageSize;
@@ -112,26 +127,54 @@ public class FileReceiverClientHandler extends Thread {
                                 throw new EOFException("Image data eof early");
                             }
                             binOs.write(imgBuffer, 0, imageSize);
+                            rawFrame.fromArray(0, imageSize, imgBuffer);
+
+                            Mat frame = Imgcodecs.imdecode(rawFrame, Imgcodecs.IMREAD_UNCHANGED);
+
+                            if (videoWriter == null) {
+                                videoWriter = new VideoWriter(
+                                        videoOutputFile.getAbsolutePath(),
+                                        fourcc, 60, frame.size(), true);
+                            }
+                            videoWriter.write(frame);
+                            frame.release();
+
 
                             frameIdx++;
                         }
                     }
                     binIdx++;
+                    videoWriter.release();
+                    videoWriter = null;
                 } finally {
                     Thread t = new Thread(() -> {
                         try {
-                            Path dst = new Path(baseDir, binOutputFile.getName());
+                            {
+                                Path dst = new Path(baseDir, binOutputFile.getName());
 
-                            System.out.println("Uploading " + dst.toString());
+                                System.out.println("Uploading " + dst.toString());
 
-                            _server.getFs().copyFromLocalFile(
-                                    new Path(binOutputFile.getAbsolutePath()),
-                                    dst
-                            );
+                                _server.getFs().copyFromLocalFile(
+                                        new Path(binOutputFile.getAbsolutePath()),
+                                        dst
+                                );
 
-                            System.out.println(dst.toString() + " uploaded");
-                            if (!binOutputFile.delete()) {
-                                System.err.println("Failed to delete tmp file: " + binOutputFile);
+                                System.out.println(dst.toString() + " uploaded");
+                                if (!binOutputFile.delete()) {
+                                    System.err.println("Failed to delete tmp file: " + binOutputFile);
+                                }
+                            }
+                            {
+                                Path dst = new Path(baseDir, videoOutputFile.getName());
+                                System.out.println("Uploading " + dst.toString());
+                                _server.getFs().copyFromLocalFile(
+                                        new Path(videoOutputFile.getAbsolutePath()),
+                                        dst
+                                );
+                                System.out.println(dst.toString() + " uploaded");
+                                if (!videoOutputFile.delete()) {
+                                    System.err.println("Failed to delete tmp file: " + binOutputFile);
+                                }
                             }
                         } catch (IOException e) {
                             e.printStackTrace();

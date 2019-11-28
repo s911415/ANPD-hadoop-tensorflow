@@ -43,7 +43,8 @@ public class DetectorJob {
         Configuration conf = new Configuration();
         if (Config.DEBUG) {
             try {
-                _hdfs = FileSystem.get(conf);
+                conf.set("mapreduce.framework.name", "local");
+                _hdfs = FileSystem.getLocal(conf);
                 return _hdfs;
             } catch (IOException e) {
                 e.printStackTrace();

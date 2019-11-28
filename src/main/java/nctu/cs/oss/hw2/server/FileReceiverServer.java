@@ -4,10 +4,7 @@ import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.DetectorJob;
 import nctu.cs.oss.hw2.mapreduce.WholeFileInputFormat;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IntWritable;
@@ -47,7 +44,7 @@ public class FileReceiverServer extends Thread {
             _conf = new Configuration();
             if (Config.DEBUG) {
                 _conf.set("mapreduce.framework.name", "local");
-                _hdfs = FileSystem.get(_conf);
+                _hdfs = FileSystem.getLocal(_conf);
             } else {
                 System.setProperty("HADOOP_USER_NAME", "hadoop");
                 _conf.set("fs.defaultFS", Config.HDFS_URL);
