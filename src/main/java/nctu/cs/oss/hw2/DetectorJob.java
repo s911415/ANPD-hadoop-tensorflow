@@ -83,19 +83,22 @@ public class DetectorJob {
         if ((localCacheResult = _cache.get(sha1Value)) != null) {
             return localCacheResult;
         }
-        Path path = new Path(CACHE_ROOT + sha1Value);
-        try {
-            FileStatus[] files = getHdfs().listStatus(path);
-            for (FileStatus fileStatus : files) {
-                String sha1Val = fileStatus.getPath().getName();
-                if (sha1Val.length() == 40) {
-                    boolean detectedResult = fileStatus.getLen() > 0;
-                    _cache.putIfAbsent(sha1Val, detectedResult);
-                    return detectedResult;
+
+        if(false) {
+            Path path = new Path(CACHE_ROOT + sha1Value);
+            try {
+                FileStatus[] files = getHdfs().listStatus(path);
+                for (FileStatus fileStatus : files) {
+                    String sha1Val = fileStatus.getPath().getName();
+                    if (sha1Val.length() == 40) {
+                        boolean detectedResult = fileStatus.getLen() > 0;
+                        _cache.putIfAbsent(sha1Val, detectedResult);
+                        return detectedResult;
+                    }
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         return null;
