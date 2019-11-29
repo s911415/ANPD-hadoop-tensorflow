@@ -2,7 +2,8 @@ package nctu.cs.oss.hw2;
 
 import nctu.cs.oss.hw2.detector.LicencePlateDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
-import org.apache.commons.lang3.Conversion;
+import nctu.cs.oss.hw2.video_bag.BagDecoder;
+import nctu.cs.oss.hw2.video_bag.FileDecoder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.BytesWritable;
@@ -13,7 +14,6 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.IOException;
 import java.net.URI;
@@ -85,7 +85,7 @@ public class DetectorJob {
             return localCacheResult;
         }
 
-        if(false) {
+        if (false) {
             Path path = new Path(CACHE_ROOT + sha1Value);
             try {
                 FileStatus[] files = getHdfs().listStatus(path);
@@ -141,51 +141,49 @@ public class DetectorJob {
 
             byte[] imageBinData = value.getBytes();
             final int dataLen = value.getLength();
-            int offset = 0;
             int frameIdx = frameStart;
 
-            Mat img;
-            while (offset < dataLen) {
-                int imageSize = Conversion.byteArrayToInt(
-                        imageBinData,
-                        offset, 0,
-                        0, 4);
-                offset += 4;
+            BagDecoder decoder;
+            if (Config.BIN_FORMAT == Config.BinFormat.Video) {
+                decoder = null;
+            } else {
+                decoder = new FileDecoder(imageBinData, dataLen);
+            }
+            for (BagDecoder.Data data : decoder) {
+                try {
+                    Boolean cachedResult = getCachedResult(data.sha1Value);
+                    Boolean detectResult;
+                    if (cachedResult != null) {
+                        detectResult = cachedResult;
+                        System.out.println("File: " + fileName + ", Frame: " + frameIdx + " fetch from cache: " + detectResult + ".");
+                    } else {
+                        Mat toBeDetectMat;
+                        if (data.frame.size().equals(MAX_IMAGE_SIZE)) {
+                            toBeDetectMat = data.frame;
+                        } else {
+                            Utils.resizeMat(data.frame, resizedMat, MAX_IMAGE_SIZE);
+                            toBeDetectMat = resizedMat;
+                        }
 
-                String sha1 = Utils.getSha1(imageBinData, offset, imageSize);
-                Boolean cachedResult = getCachedResult(sha1);
-                Boolean detectResult;
-                if (cachedResult != null) {
-                    detectResult = cachedResult;
-                    System.out.println("File: " + fileName + ", Frame: " + frameIdx + " fetch from cache: " + detectResult + ".");
-                } else {
-                    // Cache missed
+                        {
+                            int count = _detector.detect(toBeDetectMat);
+                            System.out.println("File: " + fileName + ", Frame: " + frameIdx + " detected " + count + " plates");
 
-                    imgData.fromArray(offset, imageSize, imageBinData);
+                            detectResult = count > 0;
+                        }
 
-                    {
-                        img = Imgcodecs.imdecode(imgData, Imgcodecs.IMREAD_UNCHANGED);
-                        Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
-                        img.release();
+                        updateCache(data.sha1Value, detectResult);
                     }
-                    {
-                        int count = _detector.detect(resizedMat);
-                        System.out.println("File: " + fileName + ", Frame: " + frameIdx + " detected " + count + " plates");
 
-                        detectResult = count > 0;
+                    // only write key value if detected
+                    if (detectResult) {
+                        this.frameIdxWriteable.set(frameIdx);
+                        context.write(this.frameIdxWriteable, ONE);
                     }
-
-                    updateCache(sha1, detectResult);
+                } finally {
+                    data.close();
+                    frameIdx++;
                 }
-
-                // only write key value if detected
-                if (detectResult) {
-                    this.frameIdxWriteable.set(frameIdx);
-                    context.write(this.frameIdxWriteable, ONE);
-                }
-
-                frameIdx++;
-                offset += imageSize;
             }
         }
 

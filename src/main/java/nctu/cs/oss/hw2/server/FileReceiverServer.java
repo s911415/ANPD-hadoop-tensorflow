@@ -4,7 +4,10 @@ import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.DetectorJob;
 import nctu.cs.oss.hw2.mapreduce.WholeFileInputFormat;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IntWritable;
@@ -82,8 +85,8 @@ public class FileReceiverServer extends Thread {
         // String dirName = Config.ROOT_DIR + "/" + clientHandler.getFileName();
         try {
             clientHandler.waitAllUploadThread();
-            if(!clientHandler.getTmpDir().delete()){
-                System.err.println("Failed to remove tmp dir: "  + clientHandler.getTmpDir().getAbsolutePath());
+            if (!clientHandler.getTmpDir().delete()) {
+                System.err.println("Failed to remove tmp dir: " + clientHandler.getTmpDir().getAbsolutePath());
             }
             sendHadoopTask(clientHandler);
         } catch (InterruptedException e) {
@@ -139,8 +142,16 @@ public class FileReceiverServer extends Thread {
             job.setOutputValueClass(IntWritable.class);
 
             // FileInputFormat.setInputPathFilter(job, DetectorJob.FilesPathFilter.class);
-            FileInputFormat.addInputPath(job, new Path(Config.HDFS_URL + client.getHdfsDir()));
-            final Path output = client.getOutputFilePath();
+            final Path input;
+            final Path output;
+            if (Config.DEBUG) {
+                input = new Path("file:///" + new File(client.getHdfsDir()).getAbsolutePath());
+                output = new Path("file:///" + new File(client.getOutputFilePath().toString()).getAbsolutePath());
+            } else {
+                input = new Path(Config.HDFS_URL + client.getHdfsDir());
+                output = client.getOutputFilePath();
+            }
+            FileInputFormat.addInputPath(job, input);
             _hdfs.delete(output, true);
             FileOutputFormat.setOutputPath(job, output);
 
@@ -173,11 +184,11 @@ public class FileReceiverServer extends Thread {
                     Collections.sort(frames);
 
                     // inject frames
-                    if(false) {
-                       final int len = frames.size();
-                       for(int i = 0; i<len; i++) {
+                    if (false) {
+                        final int len = frames.size();
+                        for (int i = 0; i < len; i++) {
 
-                       }
+                        }
 
                         Collections.sort(frames);
                     }
