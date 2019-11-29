@@ -100,6 +100,7 @@ public class FileReceiverClientHandler extends Thread {
                     outputFile = new File(_tmpDir, frameIdxStart + "_" + frameIdxEnd + EXT);
                     encoder = new FileEncoder(outputFile);
                 }
+                int binContentCnt = 0;
                 try {
                     for (int i = 0; i < Config.BATCH_SIZE; i++) {
                         int imageSize;
@@ -127,35 +128,39 @@ public class FileReceiverClientHandler extends Thread {
                             encoder.write(imgBuffer, 0, imageSize);
                             frameIdx++;
                         }
+
+                        binContentCnt++;
                     }
                     binIdx++;
                     encoder.close();
                 } finally {
-                    Thread t = new Thread(() -> {
-                        try {
-                            {
-                                Path dst = new Path(baseDir, outputFile.getName());
+                    if (binContentCnt > 0) {
+                        Thread t = new Thread(() -> {
+                            try {
+                                {
+                                    Path dst = new Path(baseDir, outputFile.getName());
 
-                                System.out.println("Uploading " + dst.toString());
+                                    System.out.println("Uploading " + dst.toString());
 
-                                _server.getFs().copyFromLocalFile(
-                                        new Path(outputFile.getAbsolutePath()),
-                                        dst
-                                );
+                                    _server.getFs().copyFromLocalFile(
+                                            new Path(outputFile.getAbsolutePath()),
+                                            dst
+                                    );
 
-                                System.out.println(dst.toString() + " uploaded");
-                                if (!outputFile.delete()) {
-                                    System.err.println("Failed to delete tmp file: " + outputFile);
+                                    System.out.println(dst.toString() + " uploaded");
+                                    if (!outputFile.delete()) {
+                                        System.err.println("Failed to delete tmp file: " + outputFile);
+                                    }
                                 }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } finally {
+                                _globalUploaderSem.release();
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } finally {
-                            _globalUploaderSem.release();
-                        }
-                    });
-                    t.start();
-                    _uploadThreads.add(t);
+                        });
+                        t.start();
+                        _uploadThreads.add(t);
+                    }
                 }
             }
             _client.close();

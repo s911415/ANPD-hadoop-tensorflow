@@ -7,8 +7,8 @@ public class Config {
     private Config() {
     }
 
-    public static final boolean DEBUG = true;
-    public static final int SERVER_PORT = 3334;
+    public static final boolean DEBUG = false;
+    public static final int SERVER_PORT = 3333;
     public static final String HDFS_URL = "hdfs://master.hd:9000";
     public static final String ROOT_DIR;
     public static final String MODEL_ROOT;
@@ -16,7 +16,7 @@ public class Config {
     public static final int BATCH_SIZE = 100;
     public static final int MAX_TMP_FILE_PER_CLIENT = 5;
     public static final int MAX_UPLOADER_SAME_TIME = 100;
-    public static final BinFormat BIN_FORMAT = BinFormat.Bin;
+    public static final BinFormat BIN_FORMAT = BinFormat.Video;
 
     static {
         if (DEBUG) {

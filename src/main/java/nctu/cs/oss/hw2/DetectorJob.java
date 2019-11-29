@@ -4,6 +4,7 @@ import nctu.cs.oss.hw2.detector.LicencePlateDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
 import nctu.cs.oss.hw2.video_bag.BagDecoder;
 import nctu.cs.oss.hw2.video_bag.FileDecoder;
+import nctu.cs.oss.hw2.video_bag.VideoDecoder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.BytesWritable;
@@ -145,7 +146,7 @@ public class DetectorJob {
 
             BagDecoder decoder;
             if (Config.BIN_FORMAT == Config.BinFormat.Video) {
-                decoder = null;
+                decoder = new VideoDecoder(imageBinData, dataLen);
             } else {
                 decoder = new FileDecoder(imageBinData, dataLen);
             }
