@@ -31,6 +31,7 @@ public class FileReceiverClientHandler extends Thread {
     private File _tmpDir;
     private final List<Thread> _uploadThreads = new ArrayList<>();
     private static final Semaphore _globalUploaderSem = new Semaphore(Config.MAX_UPLOADER_SAME_TIME);
+    private static final Semaphore _globalClientProcessingSem = new Semaphore(Config.MAX_CLIENT_HANDLE_SAME_TIME);
 
     FileReceiverClientHandler(Socket client, FileReceiverServer server) {
         _server = server;
@@ -69,6 +70,8 @@ public class FileReceiverClientHandler extends Thread {
                     }
                 }
             }
+            _globalClientProcessingSem.acquire();
+
             _fileName = sb.toString();
             {
                 _tmpDir = Files.createTempDirectory("_client_").toFile();
@@ -164,7 +167,7 @@ public class FileReceiverClientHandler extends Thread {
                 }
             }
             _client.close();
-
+            _globalClientProcessingSem.release();
             _server.onClientDisconnected(this);
         } catch (IOException e) {
             e.printStackTrace();

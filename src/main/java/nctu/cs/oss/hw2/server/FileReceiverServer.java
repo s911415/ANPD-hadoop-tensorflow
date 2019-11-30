@@ -37,8 +37,6 @@ public class FileReceiverServer extends Thread {
     private final FsPermission _pem;
     private final Configuration _conf;
     private static final Path _outputPath = new Path(Config.ROOT_DIR + "/output");
-    private final Semaphore _clientRunningSem = new Semaphore(Config.MAX_CLIENT_HANDLE_SAME_TIME);
-
 
     public FileReceiverServer(int port) throws IOException {
         this._port = port;
@@ -75,11 +73,9 @@ public class FileReceiverServer extends Thread {
                 synchronized (_server) {
                     Socket client = _server.accept();
                     FileReceiverClientHandler handler = new FileReceiverClientHandler(client, this);
-                    _clientRunningSem.acquire();
                     handler.start();
-                    _clientRunningSem.release();
                 }
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
