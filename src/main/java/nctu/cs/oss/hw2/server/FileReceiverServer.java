@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +37,7 @@ public class FileReceiverServer extends Thread {
     private final FsPermission _pem;
     private final Configuration _conf;
     private static final Path _outputPath = new Path(Config.ROOT_DIR + "/output");
+    private final Semaphore _clientRunningSem = new Semaphore(Config.MAX_CLIENT_HANDLE_SAME_TIME);
 
 
     public FileReceiverServer(int port) throws IOException {
@@ -73,9 +75,11 @@ public class FileReceiverServer extends Thread {
                 synchronized (_server) {
                     Socket client = _server.accept();
                     FileReceiverClientHandler handler = new FileReceiverClientHandler(client, this);
+                    _clientRunningSem.acquire();
                     handler.start();
+                    _clientRunningSem.release();
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
@@ -184,10 +188,18 @@ public class FileReceiverServer extends Thread {
                     Collections.sort(frames);
 
                     // inject frames
-                    if (false) {
+                    if (Config.FILL_MISSING_FRAME) {
                         final int len = frames.size();
                         for (int i = 0; i < len; i++) {
-
+                            int currentFrameNo = frames.get(i);
+                            Integer nextFrameNo = (i + 1 < len) ? frames.get(i + 1) : null;
+                            if (nextFrameNo != null && (nextFrameNo - currentFrameNo) <= Config.FILL_MISSING_RANGE) {
+                                // Fill missing frame
+                                for (int j = currentFrameNo + 1; j < nextFrameNo; j++) {
+                                    System.out.println(client.getFileName() + ": Fill in " + j);
+                                    frames.add(j);
+                                }
+                            }
                         }
 
                         Collections.sort(frames);
