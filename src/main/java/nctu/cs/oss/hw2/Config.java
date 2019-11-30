@@ -17,7 +17,7 @@ public class Config {
     public static final int MAX_UPLOADER_SAME_TIME = 100;
     public static final int MAX_CLIENT_HANDLE_SAME_TIME = 4;
     public static final boolean FILL_MISSING_FRAME = true;
-    public static final int FILL_MISSING_RANGE = 2;
+    public static final int FILL_MISSING_RANGE = 5;
     public static final BinFormat BIN_FORMAT = BinFormat.Video;
 
     static {

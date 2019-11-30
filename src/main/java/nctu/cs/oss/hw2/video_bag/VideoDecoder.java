@@ -60,7 +60,7 @@ public class VideoDecoder implements BagDecoder {
         public Data next() {
             if (eof)
                 throw new RuntimeException("EOF");
-            Imgcodecs.imencode(".jpg", videoFrame, buffer, encodeParams);
+            Imgcodecs.imencode(".bmp", videoFrame, buffer, encodeParams);
 
             byte[] data = buffer.toArray();
             String sha1 = Utils.getSha1(data, 0, data.length);
