@@ -1,5 +1,6 @@
 package nctu.cs.oss.hw2;
 
+import nctu.cs.oss.hw2.detector.ECCV2018Detector;
 import nctu.cs.oss.hw2.detector.LicencePlateDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
 import nctu.cs.oss.hw2.video_bag.BagDecoder;
@@ -115,7 +116,7 @@ public class DetectorJob {
         public DetectorMapper() {
             super();
             System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-            _detector = new SSDDetector();
+            _detector = new ECCV2018Detector();
             resizedMat = new Mat();
             imgData = new MatOfByte();
         }

@@ -33,7 +33,6 @@ public class ECCV2018Detector implements LicencePlateDetector {
     private final int[] _outIdx = {0, 0, 0, 0};
     private final float CAR_SCORE_THRESHOLD = 0.30f;
     private final float LP_THRESHOLD = 0.5f;
-    private final float LP_AREA_THRESHOLD = 0.35f;
     private Scalar _dstBorderColor = null;
     private final boolean[] _vehicleIdx = {false, false, false, false, false, false, false, false, false, false};
     private Mat _lpResized;
@@ -117,7 +116,7 @@ public class ECCV2018Detector implements LicencePlateDetector {
                 if (bottom >= rows) bottom = rows - 1;
 
                 Rect roi = new Rect(left, top, right - left, bottom - top);
-                if (roi.area() > 100 * 60) {
+                if (dstImg != null) {
                     if (_dstBorderColor == null) {
                         if (dstImg.channels() == 1) {
                             _dstBorderColor = new Scalar(0);
@@ -125,13 +124,13 @@ public class ECCV2018Detector implements LicencePlateDetector {
                             _dstBorderColor = new Scalar(0, 255, 0);
                         }
                     }
+                }
 
-                    if (detectLpInCar(resizedImg, roi, dstImg)) {
-                        count++;
-                        if (dstImg != null) {
-                            Imgproc.rectangle(dstImg, roi, _dstBorderColor);
+                if (detectLpInCar(resizedImg, roi, dstImg)) {
+                    count++;
+                    if (dstImg != null) {
+                        Imgproc.rectangle(dstImg, roi, _dstBorderColor);
 
-                        }
                     }
                 }
             }
@@ -181,76 +180,102 @@ public class ECCV2018Detector implements LicencePlateDetector {
 //        }
 //    }
 
+    private static int ii = 0;
 
     private boolean detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
         final int netStep = 16;
         Mat carImg = new Mat(resizedImg, roi);
-//        float ratio;
-//        int minDimImg;
-//        if (roi.width > roi.height) {
-//            ratio = (float) roi.width / roi.height;
-//            minDimImg = roi.height;
-//        } else {
-//            ratio = (float) roi.height / roi.width;
-//            minDimImg = roi.width;
-//        }
-//
-//        int side = (int) (ratio * 288.0);
-//        float boundDim = Math.min(side + (side % netStep), 608);
-//
-//        float factor = boundDim / minDimImg;
-//        int w = (int) (factor * roi.width);
-//        int h = (int) (factor * roi.height);
-//
-//        if (w % netStep != 0) {
-//            w += (netStep - w % netStep);
-//        }
-//        if (h % netStep != 0) {
-//            h += (netStep - h % netStep);
-//        }
+        float ratio;
+        int minDimImg;
+        if (roi.width > roi.height) {
+            ratio = (float) roi.width / roi.height;
+            minDimImg = roi.height;
+        } else {
+            ratio = (float) roi.height / roi.width;
+            minDimImg = roi.width;
+        }
 
-        // Imgproc.resize(carImg, _lpResized, _lpInputSize);
-        carImg.copyTo(_lpResized);
+        int side = (int) (ratio * 288.0);
+        float boundDim = Math.min(side + (side % netStep), 608);
+
+        float factor = boundDim / minDimImg;
+        int w = (int) (factor * roi.width);
+        int h = (int) (factor * roi.height);
+
+        if (w % netStep != 0) {
+            w += (netStep - w % netStep);
+        }
+        if (h % netStep != 0) {
+            h += (netStep - h % netStep);
+        }
+
+        Imgproc.resize(carImg, _lpResized, new Size(w, h));
         carImg.release();
         Session.Runner runner = _tfSession.runner();
         final int R = _lpResized.rows();
         final int C = _lpResized.cols();
+
+//        Mat tensorInput = Dnn.blobFromImage(_lpResized, 1.0 / 255);
+//        tensorInput.reshape(1, new int[]{1, R, C, 3});
         float[][][][] dataTmp = new float[1][R][C][3];
 
         for (int r = 0; r < R; r++) {
             for (int c = 0; c < C; c++) {
                 double[] data = _lpResized.get(r, c);
                 for (int ch = 0; ch < 3; ch++) {
-                    dataTmp[0][r][c][ch] = (float) data[ch];
+                    dataTmp[0][r][c][ch] = (float) data[ch] / 255.0f;
                 }
             }
         }
-
         Tensor<?> inputImg = Tensor.create(dataTmp);
+
+//        Mat tensorInput = Dnn.blobFromImage(_lpResized, 1.0 / 255);
+//        float[][][][] dataTmp = new float[1][R][C][3];
+//
+//        {
+//            int[] idx = {0, 0, 0, 0};
+//            for (int r = 0; r < R; r++) {
+//                idx[1] = r;
+//                for (int c = 0; c < C; c++) {
+//                    idx[2] = c;
+//                    tensorInput.get(idx, dataTmp[0][r][c]);
+//                }
+//            }
+//        }
+//        tensorInput.release();
+//
+//        Tensor<?> inputImg = Tensor.create(dataTmp);
+
+
         runner = runner.feed("input:0", inputImg);
         Tensor<?> out = runner.fetch("concatenate_1/concat:0").run().get(0);
-        long[] dim = out.shape();
-        float[][][][] outValues = new float[(int) dim[0]][(int) dim[1]][(int) dim[2]][(int) dim[3]];
+        long[] dimLong = out.shape();
+        int[] dim = {(int) dimLong[0], (int) dimLong[1], (int) dimLong[2], (int) dimLong[3]};
+        float[][][][] outValues = new float[dim[0]][dim[1]][dim[2]][dim[3]];
         out.copyTo(outValues);
-        int sum = 0;
-        float reqArea = dim[1] * dim[2];
-        reqArea *= LP_AREA_THRESHOLD;
-        for (int r = 0; r < (int) dim[1]; r++) {
-            for (int c = 0; c < (int) dim[2]; c++) {
-                float score = outValues[0][r][c][0];
-                if (score > LP_THRESHOLD) {
-                    sum++;
 
-                    if (sum >= reqArea) {
-                        return true;
+        // List<Point> probPos = new ArrayList<>();
+        try {
+            // Probs = Y[..., 0]
+            // xx, yy = np.where(Probs > threshold)
+            for (int d0 = 0; d0 < dim[0]; d0++) {
+                for (int d1 = 0; d1 < dim[1]; d1++) {
+                    for (int d2 = 0; d2 < dim[2]; d2++) {
+                        if (outValues[d0][d1][d2][0] > LP_THRESHOLD) {
+                            return true;
+                            // probPos.add(new Point(d0, d1));
+                        }
                     }
                 }
             }
+        } finally {
+            inputImg.close();
+            out.close();
         }
-
-        if (sum >= reqArea) {
-            return true;
-        }
+//        for(Point p : probPos) {
+//            float score = outValues[0][(int)p.y][(int)p.x][0];
+//            return true;
+//        }
 
         return false;
     }
