@@ -1,6 +1,8 @@
 package nctu.cs.oss.hw2.app;
 
+import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.Utils;
+import nctu.cs.oss.hw2.detector.ECCV2018Detector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
 import nctu.cs.oss.hw2.detector.YOLODetector;
 import nctu.cs.oss.hw2.ui.ImageGui;
@@ -17,8 +19,7 @@ import java.nio.file.Paths;
  * Created by wcl on 2019/11/22.
  */
 public class LicencePlateDetectorApp {
-    private static final int MAX_IMAGE_HEIGHT = 720;
-    private static final Size MAX_IMAGE_SIZE = new Size(MAX_IMAGE_HEIGHT * 16 / 9, MAX_IMAGE_HEIGHT);
+    private static final Size MAX_IMAGE_SIZE = new Size(Config.MAX_IMAGE_HEIGHT * 16 / 9, Config.MAX_IMAGE_HEIGHT);
 
     private static nctu.cs.oss.hw2.detector.LicencePlateDetector _detector = null;
 
@@ -28,7 +29,7 @@ public class LicencePlateDetectorApp {
 
     public static void main(String[] args) {
         System.err.println("Start at " + System.currentTimeMillis() + "\n=================\n");
-        _detector = new SSDDetector();
+        _detector = new ECCV2018Detector();
 
         Path imgPath = Paths.get(args[0]);
         String fileName = imgPath.getFileName().toString().toLowerCase();
@@ -46,7 +47,7 @@ public class LicencePlateDetectorApp {
             gui.imshow();
             gui.waitKey(0);
         } else {
-            final boolean saveImage = true;
+            final boolean saveImage = false;
 
             VideoCapture videoCapture = new VideoCapture(imgPath.toFile().getAbsolutePath());
             Mat img = new Mat();

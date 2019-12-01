@@ -5,6 +5,9 @@ import org.opencv.core.*;
 import org.opencv.dnn.Dnn;
 import org.opencv.dnn.Net;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,15 +28,26 @@ public class YOLODetector implements LicencePlateDetector {
     private final static int inpHeight = 416; // #608    #Height of network's input image
     private final static Size inpSize = new Size(inpWidth, inpHeight);
     private final static Scalar dnnMean = new Scalar(0, 0, 0);
-    private final static double scalarFactor = 1 / 255.0;
+    private final static double scalarFactor = 1/255.0;
+    private final List<String> _labels;
 
 
-    public YOLODetector() {
-        _yoloNet = Dnn.readNetFromDarknet(
-                Config.MODEL_ROOT + "model/yolo/darknet-yolov3.cfg",
-                Config.MODEL_ROOT + "model/yolo/lapi.weights"
+    public YOLODetector()  {
+        _yoloNet = Dnn.readNetFromTensorflow(
+                Config.MODEL_ROOT + "model/frozen_model.pb"
         );
 
+        try {
+            List<String> names = Files.readAllLines(Paths.get(Config.MODEL_ROOT + "model/yolo/voc.names"));
+            _labels = new ArrayList<>(names.size());
+            for(String name : names) {
+                if(name.isEmpty()) break;
+                _labels.add(name);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         _yoloNet.setPreferableBackend(DNN_BACKEND_OPENCV);
         _yoloNet.setPreferableTarget(DNN_TARGET_CPU);
     }
@@ -60,12 +74,12 @@ public class YOLODetector implements LicencePlateDetector {
         for (Mat m : _outMats)
             m.release();
 
-        Mat blob = Dnn.blobFromImage(resizedImg, scalarFactor, inpSize, dnnMean, true, false);
+        Mat blob = Dnn.blobFromImage(resizedImg, scalarFactor, inpSize, dnnMean, false, false);
         _yoloNet.setInput(blob);
 
         _yoloNet.forward(_outMats, getOutputsNames(_yoloNet));
         if (_outTmpArr == null) {
-            _outTmpArr = new float[5 + 1 + 10];
+            _outTmpArr = new float[5 + _labels.size()];
         }
         List<Integer> classIds = new ArrayList<>(_outMats.size());
         List<Float> confidences = new ArrayList<>(_outMats.size());

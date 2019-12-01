@@ -27,8 +27,7 @@ import static nctu.cs.oss.hw2.Config.CACHE_ROOT;
  * Created by wcl on 2019/11/25.
  */
 public class DetectorJob {
-    private static final int MAX_IMAGE_HEIGHT = 1080;
-    private static final Size MAX_IMAGE_SIZE = new Size(MAX_IMAGE_HEIGHT * 16 / 9, MAX_IMAGE_HEIGHT);
+    private static final Size MAX_IMAGE_SIZE = new Size(Config.MAX_IMAGE_HEIGHT * 16 / 9, Config.MAX_IMAGE_HEIGHT);
 
     private final static IntWritable ZERO = new IntWritable(0);
     private final static IntWritable ONE = new IntWritable(1);

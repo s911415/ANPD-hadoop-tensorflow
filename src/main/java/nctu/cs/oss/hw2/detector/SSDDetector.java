@@ -21,8 +21,8 @@ import static org.opencv.core.CvType.CV_32FC1;
 public class SSDDetector implements LicencePlateDetector {
     private Net _ssdNet;
     private final List<Mat> channelMats = new ArrayList<>(3);
-    private final float SCORE_THRESHOLD = 0.15f;
-    private final int FORWARD_CNT = 1;
+    private final float SCORE_THRESHOLD = 0.3f;
+    private final int FORWARD_CNT = 0;
 
     // B, G, R
     private static final Scalar[] pixelMeans = {
