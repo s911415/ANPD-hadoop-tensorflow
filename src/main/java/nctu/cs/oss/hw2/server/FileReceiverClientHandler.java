@@ -122,7 +122,7 @@ public class FileReceiverClientHandler extends Thread {
                         // read frame
                         {
                             if (imgBuffer.length < imageSize) {
-                                imgBuffer = new byte[(imageSize >> 12) << 12];
+                                imgBuffer = new byte[(int) Math.ceil(imageSize / 4096.0) << 12];
                             }
 
                             if (Utils.read(is, imgBuffer, 0, imageSize) < 0) {

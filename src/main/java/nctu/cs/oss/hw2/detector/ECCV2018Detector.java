@@ -201,6 +201,9 @@ public class ECCV2018Detector implements LicencePlateDetector {
             minDimImg = roi.width;
         }
 
+        if(ratio > 2.5)
+            return false;
+
         int side = (int) (ratio * 288.0);
         float boundDim = Math.min(side + (side % netStep), 608);
 
@@ -221,8 +224,11 @@ public class ECCV2018Detector implements LicencePlateDetector {
         _lpResized.convertTo(_lpResizedFloat, CV_32F, 1f / 255f, 0);
         carImg.release();
 
-        if (_tensorBuffer.length < R * C * 3) {
-            _tensorBuffer = new float[((R * C * 3) >> 12) << 12];
+        int requiredSize = R * C * 3;
+        if (_tensorBuffer.length < requiredSize) {
+            int newSize = (int) Math.ceil(requiredSize / 4096.0) << 12;
+            newSize = (int) Math.ceil(newSize / 3.0) * 3;
+            _tensorBuffer = new float[newSize];
         }
 
         _lpResizedFloat.get(0, 0, _tensorBuffer);
