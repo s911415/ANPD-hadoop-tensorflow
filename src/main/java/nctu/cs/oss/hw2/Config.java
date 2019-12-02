@@ -7,7 +7,7 @@ public class Config {
     private Config() {
     }
 
-    public static final boolean DEBUG = true;
+    public static final boolean DEBUG = false;
     public static final int SERVER_PORT = 3333;
     public static final int MAX_IMAGE_HEIGHT = 480;
     public static final String HDFS_URL = "hdfs://master.hd:9000";

@@ -14,6 +14,9 @@ import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 
 import java.io.*;
+import java.nio.FloatBuffer;
+
+import static org.opencv.core.CvType.CV_32F;
 
 /**
  * Created by wcl on 2019/12/01.
@@ -36,6 +39,8 @@ public class ECCV2018Detector implements LicencePlateDetector {
     private Scalar _dstBorderColor = null;
     private final boolean[] _vehicleIdx = {false, false, false, false, false, false, false, false, false, false};
     private Mat _lpResized;
+    private Mat _lpResizedFloat;
+    private float[] _tensorBuffer = new float[3 * 1024 * 1024];
 
     //    private java.net.InetAddress _ipcAddr;
 //    private Socket _pythonSocket;
@@ -78,6 +83,7 @@ public class ECCV2018Detector implements LicencePlateDetector {
                 = true;
 
         _lpResized = new Mat();
+        _lpResizedFloat = new Mat();
 //        try {
 //            _ipcAddr = java.net.InetAddress.getByName(Config.PYTHON_IPC_IP);
 //        } catch (UnknownHostException e) {
@@ -130,8 +136,10 @@ public class ECCV2018Detector implements LicencePlateDetector {
                     count++;
                     if (dstImg != null) {
                         Imgproc.rectangle(dstImg, roi, _dstBorderColor);
-
                     }
+
+                    // once detect one, break to speed up
+                    break;
                 }
             }
         }
@@ -180,8 +188,6 @@ public class ECCV2018Detector implements LicencePlateDetector {
 //        }
 //    }
 
-    private static int ii = 0;
-
     private boolean detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
         final int netStep = 16;
         Mat carImg = new Mat(resizedImg, roi);
@@ -209,43 +215,27 @@ public class ECCV2018Detector implements LicencePlateDetector {
             h += (netStep - h % netStep);
         }
 
+        final int R = h;
+        final int C = w;
         Imgproc.resize(carImg, _lpResized, new Size(w, h));
+        _lpResized.convertTo(_lpResizedFloat, CV_32F, 1f / 255f, 0);
         carImg.release();
-        Session.Runner runner = _tfSession.runner();
-        final int R = _lpResized.rows();
-        final int C = _lpResized.cols();
 
-//        Mat tensorInput = Dnn.blobFromImage(_lpResized, 1.0 / 255);
-//        tensorInput.reshape(1, new int[]{1, R, C, 3});
-        float[][][][] dataTmp = new float[1][R][C][3];
-
-        for (int r = 0; r < R; r++) {
-            for (int c = 0; c < C; c++) {
-                double[] data = _lpResized.get(r, c);
-                for (int ch = 0; ch < 3; ch++) {
-                    dataTmp[0][r][c][ch] = (float) data[ch] / 255.0f;
-                }
-            }
+        if (_tensorBuffer.length < R * C * 3) {
+            _tensorBuffer = new float[((R * C * 3) >> 12) << 12];
         }
-        Tensor<?> inputImg = Tensor.create(dataTmp);
 
-//        Mat tensorInput = Dnn.blobFromImage(_lpResized, 1.0 / 255);
-//        float[][][][] dataTmp = new float[1][R][C][3];
-//
-//        {
-//            int[] idx = {0, 0, 0, 0};
-//            for (int r = 0; r < R; r++) {
-//                idx[1] = r;
-//                for (int c = 0; c < C; c++) {
-//                    idx[2] = c;
-//                    tensorInput.get(idx, dataTmp[0][r][c]);
-//                }
-//            }
-//        }
-//        tensorInput.release();
-//
-//        Tensor<?> inputImg = Tensor.create(dataTmp);
+        _lpResizedFloat.get(0, 0, _tensorBuffer);
 
+
+        Session.Runner runner = _tfSession.runner();
+
+        FloatBuffer tBuffer = FloatBuffer.wrap(
+                _tensorBuffer, 0, R * C * 3
+        ).asReadOnlyBuffer();
+        Tensor<?> inputImg = Tensor.create(new long[]{
+                1, R, C, 3
+        }, tBuffer);
 
         runner = runner.feed("input:0", inputImg);
         Tensor<?> out = runner.fetch("concatenate_1/concat:0").run().get(0);
