@@ -41,6 +41,8 @@ dependencies {
     compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/yarn', include: ['*.jar'])
     compileOnly fileTree(dir: HADOOP_HOME + '/share/hadoop/yarn/lib', include: ['*.jar'])
     compile fileTree(dir: OPENCV_PATH + '/build/java', include: ['*.jar'])
-    compile group: 'org.tensorflow', name: 'tensorflow', version: '1.14.0'
+    compile group: 'org.tensorflow', name: 'libtensorflow', version: '1.14.0'
+    compile fileTree(dir: 'lib/', include: ['libtensorflow_jni-1.14.0.jar'])
+
     // testCompile group: 'junit', name: 'junit', version: '4.12'
 }
