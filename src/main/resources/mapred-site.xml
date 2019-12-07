@@ -49,27 +49,27 @@
 	<!-- import -->
     <property>
         <name>yarn.app.mapreduce.am.resource.mb</name>
-        <value>1280</value>
+        <value>64</value>
     </property>
 
     <property>
         <name>mapreduce.map.memory.mb</name>
-        <value>1536</value>
+        <value>448</value>
     </property>
 
     <property>
         <name>mapreduce.reduce.memory.mb</name>
-        <value>512</value>
+        <value>64</value>
     </property>
 
     <property>
         <name>mapreduce.map.java.opts</name>
-        <value>-Xmx4G</value>
+        <value> -Xms64M -Xmx384M -XX:MaxPermSize=384M </value>
     </property>
 
     <property>
         <name>mapreduce.reduce.java.opts</name>
-        <value>-Xmx4G</value>
+        <value> -Xms32M -Xmx64M -XX:MaxPermSize=64M </value>
     </property>
     <!--
         <property>
