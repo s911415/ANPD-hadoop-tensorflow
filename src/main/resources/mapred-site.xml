@@ -64,12 +64,12 @@
 
     <property>
         <name>mapreduce.map.java.opts</name>
-        <value> -Xms64M -Xmx384M -XX:MaxPermSize=384M </value>
+        <value> -Xms64M -Xmx384M </value>
     </property>
 
     <property>
         <name>mapreduce.reduce.java.opts</name>
-        <value> -Xms32M -Xmx64M -XX:MaxPermSize=64M </value>
+        <value> -Xms32M -Xmx64M </value>
     </property>
     <!--
         <property>
