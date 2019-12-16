@@ -75,11 +75,9 @@ public class FileReceiverServer extends Thread {
 
         while (!this.isInterrupted()) {
             try {
-                synchronized (_server) {
-                    Socket client = _server.accept();
-                    FileReceiverClientHandler handler = new FileReceiverClientHandler(client, this);
-                    handler.start();
-                }
+                Socket client = _server.accept();
+                FileReceiverClientHandler handler = new FileReceiverClientHandler(client, this);
+                handler.start();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -209,7 +207,15 @@ public class FileReceiverServer extends Thread {
                     e.printStackTrace();
                 } finally {
                     _finishedHadoopTask++;
-                    if (_maxClientAccepted > 0 && _finishedHadoopTask == _maxClientAccepted) {
+                    System.out.println("Client " + client.getFileName() + " finished");
+                    System.out.println("total = " + _finishedHadoopTask + "/" + _maxClientAccepted);
+                    if (_maxClientAccepted > 0 && _finishedHadoopTask >= _maxClientAccepted) {
+                        try {
+                            _server.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
                         FileReceiverServer.this.interrupt();
                     }
                 }
@@ -218,5 +224,4 @@ public class FileReceiverServer extends Thread {
             e.printStackTrace();
         }
     }
-
 }
