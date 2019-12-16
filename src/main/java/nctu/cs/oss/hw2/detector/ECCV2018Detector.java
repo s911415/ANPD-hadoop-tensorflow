@@ -189,6 +189,10 @@ public class ECCV2018Detector implements LicencePlateDetector {
 //    }
 
     private boolean detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
+        return true;
+    }
+
+    private boolean __detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
         final int netStep = 16;
         Mat carImg = new Mat(resizedImg, roi);
         float ratio;

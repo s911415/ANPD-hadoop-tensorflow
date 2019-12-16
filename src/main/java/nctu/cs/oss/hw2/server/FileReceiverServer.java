@@ -5,7 +5,6 @@ import nctu.cs.oss.hw2.DetectorJob;
 import nctu.cs.oss.hw2.mapreduce.WholeFileInputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -24,7 +23,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +35,8 @@ public class FileReceiverServer extends Thread {
     private final FsPermission _pem;
     private final Configuration _conf;
     private static final Path _outputPath = new Path(Config.ROOT_DIR + "/output");
+    private int _maxClientAccepted = -1;
+    private int _finishedHadoopTask = 0;
 
     public FileReceiverServer(int port) throws IOException {
         this._port = port;
@@ -62,6 +62,11 @@ public class FileReceiverServer extends Thread {
 
             mkdirs(_outputPath);
         }
+    }
+
+    public FileReceiverServer setMaxClientCount(int n) {
+        this._maxClientAccepted = n;
+        return this;
     }
 
     @Override
@@ -105,16 +110,6 @@ public class FileReceiverServer extends Thread {
 
     private void mkdirs(Path path) throws IOException {
         _hdfs.mkdirs(path, _pem);
-    }
-
-    private void listFiles(String dirName) throws IOException {
-        Path f = new Path(dirName);
-        FileStatus[] status = _hdfs.listStatus(f);
-        System.out.println(dirName + " has files:");
-        for (int i = 0; i < status.length; i++) {
-            System.out.println(status[i].getPath().toString());
-        }
-        System.out.println("");
     }
 
     private void sendHadoopTask(FileReceiverClientHandler client) {
@@ -212,6 +207,11 @@ public class FileReceiverServer extends Thread {
                     _hdfs.delete(output, true);
                 } catch (IOException | InterruptedException | ClassNotFoundException e) {
                     e.printStackTrace();
+                } finally {
+                    _finishedHadoopTask++;
+                    if (_maxClientAccepted > 0 && _finishedHadoopTask == _maxClientAccepted) {
+                        FileReceiverServer.this.interrupt();
+                    }
                 }
             }).start();
         } catch (IOException e) {
