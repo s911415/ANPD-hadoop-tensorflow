@@ -2,7 +2,6 @@ package nctu.cs.oss.hw2;
 
 import nctu.cs.oss.hw2.detector.ECCV2018Detector;
 import nctu.cs.oss.hw2.detector.LicencePlateDetector;
-import nctu.cs.oss.hw2.detector.SSDDetector;
 import nctu.cs.oss.hw2.video_bag.BagDecoder;
 import nctu.cs.oss.hw2.video_bag.FileDecoder;
 import nctu.cs.oss.hw2.video_bag.VideoDecoder;
@@ -150,30 +149,45 @@ public class DetectorJob {
             } else {
                 decoder = new FileDecoder(imageBinData, dataLen);
             }
+            Map<Integer, Boolean> mapperResult = new HashMap<>();
             for (BagDecoder.Data data : decoder) {
                 try {
                     Boolean cachedResult = getCachedResult(data.sha1Value);
-                    Boolean detectResult;
+                    Boolean detectResult = null;
                     if (cachedResult != null) {
                         detectResult = cachedResult;
                         System.out.println("File: " + fileName + ", Frame: " + frameIdx + " fetch from cache: " + detectResult + ".");
+                        mapperResult.put(frameIdx, detectResult);
                     } else {
-                        Mat toBeDetectMat;
-                        if (data.frame.size().equals(MAX_IMAGE_SIZE)) {
-                            toBeDetectMat = data.frame;
+                        if (shouldSkipThisFrame(frameIdx)) {
+                            int referenceFrameIdx = getClosestNonSkipFrameIdx(frameIdx);
+                            detectResult = mapperResult.get(referenceFrameIdx);
+
+                            System.out.println("File: " + fileName + ", Frame: " + frameIdx + " reference from frame " + referenceFrameIdx +
+                                    ", with " + detectResult);
                         } else {
-                            Utils.resizeMat(data.frame, resizedMat, MAX_IMAGE_SIZE);
-                            toBeDetectMat = resizedMat;
+                            Mat toBeDetectMat;
+                            if (data.frame.size().equals(MAX_IMAGE_SIZE)) {
+                                toBeDetectMat = data.frame;
+                            } else {
+                                Utils.resizeMat(data.frame, resizedMat, MAX_IMAGE_SIZE);
+                                toBeDetectMat = resizedMat;
+                            }
+
+                            {
+                                long startTime = System.currentTimeMillis();
+                                int count = _detector.detect(toBeDetectMat);
+                                long endTime = System.currentTimeMillis();
+                                System.out.println("File: " + fileName + ", Frame: " + frameIdx + " detected " + count + " plates, " +
+                                        "cost " + (endTime - startTime) + " ms");
+
+                                detectResult = count > 0;
+
+                                mapperResult.put(frameIdx, detectResult);
+                            }
+
+                            updateCache(data.sha1Value, detectResult);
                         }
-
-                        {
-                            int count = _detector.detect(toBeDetectMat);
-                            System.out.println("File: " + fileName + ", Frame: " + frameIdx + " detected " + count + " plates");
-
-                            detectResult = count > 0;
-                        }
-
-                        updateCache(data.sha1Value, detectResult);
                     }
 
                     // only write key value if detected
@@ -198,6 +212,14 @@ public class DetectorJob {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+
+        private static boolean shouldSkipThisFrame(int frameIdx) {
+            return (frameIdx % Config.BYPASS_MOD_FACTOR) != 0;
+        }
+
+        private static int getClosestNonSkipFrameIdx(int frameIdx) {
+            return frameIdx - (frameIdx % Config.BYPASS_MOD_FACTOR);
         }
     }
 
