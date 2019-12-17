@@ -188,11 +188,11 @@ public class ECCV2018Detector implements LicencePlateDetector {
 //        }
 //    }
 
-    private boolean detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
+    private boolean __detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
         return true;
     }
 
-    private boolean __detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
+    private boolean detectLpInCar(Mat resizedImg, Rect roi, Mat dstImg) {
         final int netStep = 16;
         Mat carImg = new Mat(resizedImg, roi);
         float ratio;
@@ -208,7 +208,8 @@ public class ECCV2018Detector implements LicencePlateDetector {
         if(ratio > 2.5)
             return false;
 
-        int side = (int) (ratio * 288.0);
+        // int side = (int) (ratio * 288.0);
+        int side = (int) (ratio * 192.0);
         float boundDim = Math.min(side + (side % netStep), 608);
 
         float factor = boundDim / minDimImg;
