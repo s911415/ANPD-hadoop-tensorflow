@@ -1,5 +1,7 @@
 package nctu.cs.oss.hw2;
 
+import org.opencv.core.Size;
+
 /**
  * Created by wcl on 2019/11/25.
  */
@@ -14,16 +16,17 @@ public class Config {
     public static final String ROOT_DIR;
     public static final String MODEL_ROOT;
     public static final String CACHE_ROOT;
-    public static final int BATCH_SIZE = 160;
+    public static final int BATCH_SIZE = 640;
     public static final int MAX_UPLOADER_SAME_TIME = 100;
-    public static final int MAX_CLIENT_HANDLE_SAME_TIME = 8;
+    public static final int MAX_CLIENT_HANDLE_SAME_TIME = 2;
     public static final boolean FILL_MISSING_FRAME = true;
-    public static final int FILL_MISSING_RANGE = 5;
-    public static final int BYPASS_MOD_FACTOR = 4;
-    public static final BinFormat BIN_FORMAT = BinFormat.Bin;
+    public static final int BYPASS_MOD_FACTOR = 20;
+    public static final int FILL_MISSING_RANGE = BYPASS_MOD_FACTOR + 1;
+    public static final BinFormat BIN_FORMAT = BinFormat.Video;
     public static final String PYTHON_IPC_IP = "127.8.7.6";
     public static final Integer PYTHON_IPC_PORT = 7766;
     public static final String PYTHON_SCRIPT_PATH;
+    public static final Size MAX_IMAGE_SIZE = new Size((int) Math.floor(Config.MAX_IMAGE_HEIGHT * 16.0 / 9), Config.MAX_IMAGE_HEIGHT);
 
     static {
         if (DEBUG) {

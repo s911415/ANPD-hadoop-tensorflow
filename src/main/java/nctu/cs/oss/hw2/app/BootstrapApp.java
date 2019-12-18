@@ -10,9 +10,8 @@ public class BootstrapApp {
     public static void main(String[] args) {
         long startTime = System.currentTimeMillis();
         System.err.println("Start at " + startTime + "\n=================\n");
-        new ECCV2018Detector();
-
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        new ECCV2018Detector();
 
         long endTime = System.currentTimeMillis();
         System.err.println("End at " + endTime + "\n=================\n");

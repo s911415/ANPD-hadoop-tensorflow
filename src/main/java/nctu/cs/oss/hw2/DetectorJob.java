@@ -27,8 +27,6 @@ import static nctu.cs.oss.hw2.Config.CACHE_ROOT;
  * Created by wcl on 2019/11/25.
  */
 public class DetectorJob {
-    private static final Size MAX_IMAGE_SIZE = new Size(Config.MAX_IMAGE_HEIGHT * 16 / 9, Config.MAX_IMAGE_HEIGHT);
-
     private final static IntWritable ZERO = new IntWritable(0);
     private final static IntWritable ONE = new IntWritable(1);
     private final static Map<String, Boolean> _cache = new HashMap<>();
@@ -167,10 +165,10 @@ public class DetectorJob {
                                     ", with " + detectResult);
                         } else {
                             Mat toBeDetectMat;
-                            if (data.frame.size().equals(MAX_IMAGE_SIZE)) {
+                            if (data.frame.size().equals(Config.MAX_IMAGE_SIZE)) {
                                 toBeDetectMat = data.frame;
                             } else {
-                                Utils.resizeMat(data.frame, resizedMat, MAX_IMAGE_SIZE);
+                                Utils.resizeMat(data.frame, resizedMat, Config.MAX_IMAGE_SIZE);
                                 toBeDetectMat = resizedMat;
                             }
 

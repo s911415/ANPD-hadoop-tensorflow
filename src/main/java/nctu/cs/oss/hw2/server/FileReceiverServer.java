@@ -37,10 +37,12 @@ public class FileReceiverServer extends Thread {
     private static final Path _outputPath = new Path(Config.ROOT_DIR + "/output");
     private int _maxClientAccepted = -1;
     private int _finishedHadoopTask = 0;
+    private volatile int _taskId;
 
     public FileReceiverServer(int port) throws IOException {
         this._port = port;
         this._server = new ServerSocket(port);
+        _taskId = 1;
 
         // init hdfs
         {
@@ -110,7 +112,7 @@ public class FileReceiverServer extends Thread {
         _hdfs.mkdirs(path, _pem);
     }
 
-    private void sendHadoopTask(FileReceiverClientHandler client) {
+    private synchronized void sendHadoopTask(FileReceiverClientHandler client) {
         Configuration conf = new Configuration();
         if (Config.DEBUG) {
             conf.set("mapreduce.framework.name", "local");
@@ -133,6 +135,7 @@ public class FileReceiverServer extends Thread {
             job.setMapOutputValueClass(IntWritable.class);
             job.setOutputKeyClass(IntWritable.class);
             job.setOutputValueClass(IntWritable.class);
+            job.setPriorityAsInteger(_taskId++);
 
             // FileInputFormat.setInputPathFilter(job, DetectorJob.FilesPathFilter.class);
             final Path input;
@@ -220,7 +223,7 @@ public class FileReceiverServer extends Thread {
                     }
                 }
             }).start();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }

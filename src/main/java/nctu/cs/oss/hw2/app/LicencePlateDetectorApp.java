@@ -3,6 +3,7 @@ package nctu.cs.oss.hw2.app;
 import nctu.cs.oss.hw2.Config;
 import nctu.cs.oss.hw2.Utils;
 import nctu.cs.oss.hw2.detector.ECCV2018Detector;
+import nctu.cs.oss.hw2.detector.EdgeDetectionDetector;
 import nctu.cs.oss.hw2.detector.SSDDetector;
 import nctu.cs.oss.hw2.detector.YOLODetector;
 import nctu.cs.oss.hw2.ui.ImageGui;
@@ -19,8 +20,6 @@ import java.nio.file.Paths;
  * Created by wcl on 2019/11/22.
  */
 public class LicencePlateDetectorApp {
-    private static final Size MAX_IMAGE_SIZE = new Size(Config.MAX_IMAGE_HEIGHT * 16 / 9, Config.MAX_IMAGE_HEIGHT);
-
     private static nctu.cs.oss.hw2.detector.LicencePlateDetector _detector = null;
 
     static {
@@ -28,8 +27,9 @@ public class LicencePlateDetectorApp {
     }
 
     public static void main(String[] args) {
-        System.err.println("Start at " + System.currentTimeMillis() + "\n=================\n");
-        _detector = new ECCV2018Detector();
+        long startTime = System.currentTimeMillis();
+        System.err.println("Start at " + startTime + "\n=================\n");
+        _detector = new EdgeDetectionDetector();
 
         Path imgPath = Paths.get(args[0]);
         String fileName = imgPath.getFileName().toString().toLowerCase();
@@ -57,7 +57,7 @@ public class LicencePlateDetectorApp {
 
             int i = 0;
             while (videoCapture.read(img)) {
-                Utils.resizeMat(img, resizedMat, MAX_IMAGE_SIZE);
+                Utils.resizeMat(img, resizedMat, Config.MAX_IMAGE_SIZE);
                 resizedMat.copyTo(dstImg);
                 // __isContainsLicencePlate(resizedMat, null);
 
@@ -73,12 +73,14 @@ public class LicencePlateDetectorApp {
                     } else {
                         gui.imshow(dstImg);
                     }
-                    // gui.waitKey(1);
+                    gui.waitKey(1);
                 }
             }
         }
 
-        System.err.println("End at " + System.currentTimeMillis() + "\n=================\n");
+        long endTime = System.currentTimeMillis();
+        System.err.println("End at " + endTime + "\n=================\n");
+        System.err.println("Total cost " + (endTime - startTime) + "\n=================\n");
     }
 
     private static boolean __isContainsLicencePlate(final Mat resizedImg, Mat dstImg) {
@@ -88,7 +90,6 @@ public class LicencePlateDetectorApp {
         System.out.println("Cost " + (end - start) + " ms");
         System.out.println("Detected " + count + " plate.\n===================================\n");
         return count >= 1;
-
     }
 
     private static boolean isContainsLicencePlate(final Mat grayImg) {

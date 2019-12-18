@@ -1,7 +1,6 @@
 package nctu.cs.oss.hw2.detector;
 
 import nctu.cs.oss.hw2.Utils;
-import nctu.cs.oss.hw2.ui.ImageGui;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
@@ -32,11 +31,8 @@ public class EdgeDetectionDetector implements LicencePlateDetector {
 
         Mat blurImage = new Mat(grayImg.size(), grayImg.type());
         Imgproc.bilateralFilter(grayImg, blurImage, 11, 17, 17);
-        new ImageGui(blurImage, "blur").imshow();
         Mat edged = new Mat();
         Imgproc.Canny(blurImage, edged, 50, 200);
-        new ImageGui(edged, "edges").imshow();
-
         List<MatOfPoint> pointList = new ArrayList<>();
         final Mat hierarchy = new Mat();
         Imgproc.findContours(edged.clone(), pointList, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
