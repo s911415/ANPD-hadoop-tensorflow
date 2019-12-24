@@ -49,12 +49,12 @@
 	<!-- import -->
     <property>
         <name>yarn.app.mapreduce.am.resource.mb</name>
-        <value>64</value>
+        <value>128</value>
     </property>
 
     <property>
         <name>mapreduce.map.memory.mb</name>
-        <value>448</value>
+        <value>512</value>
     </property>
 
     <property>
@@ -64,7 +64,7 @@
 
     <property>
         <name>mapreduce.map.java.opts</name>
-        <value> -Xms64M -Xmx384M </value>
+        <value> -Xms64M -Xmx512M </value>
     </property>
 
     <property>
