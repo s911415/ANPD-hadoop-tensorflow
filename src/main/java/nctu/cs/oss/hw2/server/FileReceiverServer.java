@@ -197,8 +197,8 @@ public class FileReceiverServer extends Thread {
                         Collections.sort(frames);
                     }
 
-                    String outStr = frames.stream().map((i) -> i.toString())
-                            .collect(Collectors.joining("\n"));
+                    String outStr = frames.stream().map((i) -> i.toString() + "\n")
+                            .collect(Collectors.joining(""));
                     try (FSDataOutputStream os = _hdfs.create(
                             new Path(output.toString().replace("output/_", "output/")),
                             true
